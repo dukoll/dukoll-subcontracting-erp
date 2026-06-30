@@ -1,0 +1,14 @@
+.env
+.env.local
+.env.*.local
+node_modules/
+.next/
+out/
+dist/
+*.log
+.DS_Store
+Thumbs.db
+tsconfig.tsbuildinfo
+.vercel
+
+.claude/settings.local.json
