@@ -222,7 +222,7 @@ export default function SubcontractorInvoicePage() {
                   <Separator />
                   <div className="flex justify-between items-center pt-1">
                     <span className="text-lg font-bold">Total Invoice Value</span>
-                    <Badge className="text-base px-4 py-1.5 bg-blue-600">{formatCurrency(calc.totalInvoice)}</Badge>
+                    <Badge className="text-base px-4 py-1.5 bg-red-600">{formatCurrency(calc.totalInvoice)}</Badge>
                   </div>
                 </div>
 

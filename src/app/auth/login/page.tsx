@@ -4,11 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Factory } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { DukollLogo } from '@/components/shared/DukollLogo';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -17,6 +18,14 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const supabase = createClient();
+      // Accept either an email or a username. A username is resolved to its
+      // email via the get_email_for_username RPC (see scripts/migration_003.sql).
+      let email = identifier.trim();
+      if (!email.includes('@')) {
+        const { data, error: rpcErr } = await supabase.rpc('get_email_for_username', { p_username: email });
+        if (rpcErr || !data) throw new Error('Invalid username or password');
+        email = data as string;
+      }
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       router.push('/dashboard');
@@ -29,31 +38,28 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-indigo-100 p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {/* Logo / Brand */}
           <div className="flex flex-col items-center mb-8">
-            <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center mb-3">
-              <Factory className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Dukoll ERP</h1>
+            <DukollLogo className="h-11 w-auto text-gray-900 mb-3" />
             <p className="text-sm text-gray-500 mt-1">Sub-contracting Management System</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address
+                Username or Email
               </label>
               <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
+                type="text"
+                value={identifier}
+                onChange={e => setIdentifier(e.target.value)}
                 required
-                autoComplete="email"
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-sm"
-                placeholder="you@company.com"
+                autoComplete="username"
+                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition text-sm"
+                placeholder="username or you@company.com"
               />
             </div>
             <div>
@@ -66,7 +72,7 @@ export default function LoginPage() {
                 onChange={e => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-sm"
+                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition text-sm"
                 placeholder="••••••••"
               />
             </div>
@@ -74,7 +80,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2 touch-target"
+              className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2 touch-target"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {loading ? 'Signing in…' : 'Sign In'}

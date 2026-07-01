@@ -81,7 +81,7 @@ export function AdminDashboard({ name }: AdminDashboardProps) {
       {/* Quick Links */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Purchase',    href: '/vouchers/purchase/new',       icon: ClipboardList, color: 'text-blue-600 bg-blue-50' },
+          { label: 'Purchase',    href: '/vouchers/purchase/new',       icon: ClipboardList, color: 'text-red-600 bg-red-50' },
           { label: 'Transfer',    href: '/vouchers/stock-transfer/new', icon: Truck,         color: 'text-orange-600 bg-orange-50' },
           { label: 'Production',  href: '/vouchers/production/new',     icon: Factory,       color: 'text-green-600 bg-green-50' },
           { label: 'Pricing',     href: '/pricing/raw-material-prices', icon: IndianRupee,   color: 'text-purple-600 bg-purple-50' },
@@ -89,7 +89,7 @@ export function AdminDashboard({ name }: AdminDashboardProps) {
           <Link
             key={item.label}
             href={item.href}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white border border-gray-200 hover:border-blue-300 hover:shadow-sm transition"
+            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white border border-gray-200 hover:border-red-300 hover:shadow-sm transition"
           >
             <div className={`p-3 rounded-xl ${item.color}`}>
               <item.icon className="w-5 h-5" />
@@ -136,7 +136,7 @@ export function AdminDashboard({ name }: AdminDashboardProps) {
               { label: 'Cost Report',     href: '/reports/cost-report' },
               { label: 'Price History',   href: '/reports/price-history' },
             ].map(r => (
-              <Link key={r.label} href={r.href} className="text-sm text-blue-600 hover:underline py-1">
+              <Link key={r.label} href={r.href} className="text-sm text-red-600 hover:underline py-1">
                 {r.label}
               </Link>
             ))}
@@ -153,7 +153,7 @@ export function AdminDashboard({ name }: AdminDashboardProps) {
               { label: 'Godowns',   href: '/masters/godowns' },
               { label: 'Users',     href: '/admin/users' },
             ].map(r => (
-              <Link key={r.label} href={r.href} className="text-sm text-blue-600 hover:underline py-1">
+              <Link key={r.label} href={r.href} className="text-sm text-red-600 hover:underline py-1">
                 {r.label}
               </Link>
             ))}

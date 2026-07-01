@@ -64,13 +64,13 @@ export function ProductionDashboard({ name }: { name: string }) {
         <Link href="/vouchers/production/new" className="flex items-center justify-center p-4 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition">
           + New Production
         </Link>
-        <Link href="/masters/bom" className="flex items-center justify-center p-4 rounded-xl bg-white border border-gray-200 hover:border-blue-300 transition text-sm font-medium text-gray-700">
+        <Link href="/masters/bom" className="flex items-center justify-center p-4 rounded-xl bg-white border border-gray-200 hover:border-red-300 transition text-sm font-medium text-gray-700">
           View BOMs
         </Link>
-        <Link href="/reports/production" className="flex items-center justify-center p-4 rounded-xl bg-white border border-gray-200 hover:border-blue-300 transition text-sm font-medium text-gray-700">
+        <Link href="/reports/production" className="flex items-center justify-center p-4 rounded-xl bg-white border border-gray-200 hover:border-red-300 transition text-sm font-medium text-gray-700">
           Production Report
         </Link>
-        <Link href="/reports/stock-balance" className="flex items-center justify-center p-4 rounded-xl bg-white border border-gray-200 hover:border-blue-300 transition text-sm font-medium text-gray-700">
+        <Link href="/reports/stock-balance" className="flex items-center justify-center p-4 rounded-xl bg-white border border-gray-200 hover:border-red-300 transition text-sm font-medium text-gray-700">
           Stock Balance
         </Link>
       </div>

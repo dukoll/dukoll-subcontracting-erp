@@ -70,7 +70,7 @@ export function AccountingDashboard({ name }: { name: string }) {
           <Link
             key={item.label}
             href={item.href}
-            className="flex items-center justify-center p-4 rounded-xl bg-white border border-gray-200 hover:border-blue-300 hover:shadow-sm transition text-sm font-medium text-gray-700 text-center"
+            className="flex items-center justify-center p-4 rounded-xl bg-white border border-gray-200 hover:border-red-300 hover:shadow-sm transition text-sm font-medium text-gray-700 text-center"
           >
             {item.label}
           </Link>

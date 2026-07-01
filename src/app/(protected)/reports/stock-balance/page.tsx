@@ -71,7 +71,7 @@ export default function StockBalancePage() {
   }
 
   const typeColors: Record<string, string> = {
-    raw_material: 'bg-blue-100 text-blue-800',
+    raw_material: 'bg-red-100 text-red-800',
     packing_material: 'bg-purple-100 text-purple-800',
     finished_goods: 'bg-green-100 text-green-800',
     service: 'bg-gray-100 text-gray-800',

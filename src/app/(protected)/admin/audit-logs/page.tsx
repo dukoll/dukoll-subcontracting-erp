@@ -21,7 +21,7 @@ type AuditRow = AuditLog & { user?: Profile | null };
 
 const ACTION_COLORS: Record<string, string> = {
   INSERT: 'bg-green-100 text-green-800',
-  UPDATE: 'bg-blue-100 text-blue-800',
+  UPDATE: 'bg-red-100 text-red-800',
   DELETE: 'bg-red-100 text-red-800',
   LOGIN: 'bg-purple-100 text-purple-800',
   LOGOUT: 'bg-gray-100 text-gray-800',

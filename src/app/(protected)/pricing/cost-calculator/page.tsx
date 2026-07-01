@@ -201,7 +201,7 @@ export default function CostCalculatorPage() {
 
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-bold">Total Cost</span>
-                  <Badge className="text-base px-4 py-1.5 bg-blue-600">{formatCurrency(result.totalCost)}</Badge>
+                  <Badge className="text-base px-4 py-1.5 bg-red-600">{formatCurrency(result.totalCost)}</Badge>
                 </div>
                 <div className="flex justify-between items-center mt-2">
                   <span className="text-sm text-gray-600">Cost per {bom?.uom?.abbreviation ?? 'UOM'} (÷ {formatNumber(result.outputQty)})</span>

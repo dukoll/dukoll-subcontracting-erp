@@ -93,6 +93,7 @@ export interface BOMHeader {
   id: string;
   bom_code: string;
   finished_item_id: string;
+  subcontractor_id: string | null;
   output_quantity: number;
   uom_id: string | null;
   effective_from: string;
@@ -102,6 +103,7 @@ export interface BOMHeader {
   created_at: string;
   // joins
   finished_item?: Item;
+  subcontractor?: Supplier;
   uom?: UOM;
   bom_items?: BOMItem[];
 }

@@ -156,7 +156,7 @@ export default function CostReportPage() {
                   <TableCell className="text-right">{formatCurrency(row.pm_cost)}</TableCell>
                   <TableCell className="text-right font-semibold">{formatCurrency(row.total_material_cost)}</TableCell>
                   <TableCell className="text-right">
-                    <Badge className="bg-blue-100 text-blue-800">{formatCurrency(row.cost_per_uom)}</Badge>
+                    <Badge className="bg-red-100 text-red-800">{formatCurrency(row.cost_per_uom)}</Badge>
                   </TableCell>
                   <TableCell>
                     {row.missing_prices > 0

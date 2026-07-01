@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 
 import { createClient } from '@/lib/supabase/client';
-import type { BOMHeader, BOMItem, Item, UOM, UserRole } from '@/types';
+import type { BOMHeader, BOMItem, Item, UOM, UserRole, Supplier } from '@/types';
 import { formatDate, formatNumber } from '@/lib/utils';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
@@ -37,6 +37,7 @@ const bomItemSchema = z.object({
 const schema = z.object({
   bom_code: z.string().min(1),
   finished_item_id: z.string().min(1),
+  subcontractor_id: z.string().nullable().optional(),
   output_quantity: z.coerce.number().positive(),
   uom_id: z.string().nullable().optional(),
   effective_from: z.string().min(1),
@@ -68,6 +69,7 @@ export default function BOMDetailPage() {
   const [finishedItems, setFinishedItems] = useState<Item[]>([]);
   const [allItems, setAllItems] = useState<Item[]>([]);
   const [uoms, setUoms] = useState<UOM[]>([]);
+  const [subcontractors, setSubcontractors] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -84,14 +86,15 @@ export default function BOMDetailPage() {
   const fetchBom = useCallback(async () => {
     setLoading(true);
     const supabase = createClient();
-    const [bomRes, itemsRes, uomsRes] = await Promise.all([
+    const [bomRes, itemsRes, uomsRes, subsRes] = await Promise.all([
       supabase
         .from('bom_headers')
-        .select('*, finished_item:items!bom_headers_finished_item_id_fkey(*), uom:uoms(*)')
+        .select('*, finished_item:items!bom_headers_finished_item_id_fkey(*), uom:uoms(*), subcontractor:suppliers!subcontractor_id(id, name)')
         .eq('id', id)
         .single(),
       supabase.from('items').select('*').eq('is_active', true).order('item_name'),
       supabase.from('uoms').select('*').eq('is_active', true).order('name'),
+      supabase.from('suppliers').select('id,name').eq('is_active', true).eq('is_subcontractor', true).order('name'),
     ]);
     const biRes = await supabase
       .from('bom_items')
@@ -111,10 +114,12 @@ export default function BOMDetailPage() {
     setFinishedItems(items.filter(i => i.item_type === 'finished_goods'));
     setAllItems(items.filter(i => ['raw_material', 'packing_material'].includes(i.item_type)));
     setUoms(uomsRes.data ?? []);
+    setSubcontractors((subsRes.data ?? []) as Supplier[]);
 
     reset({
       bom_code: bomData.bom_code,
       finished_item_id: bomData.finished_item_id,
+      subcontractor_id: bomData.subcontractor_id ?? null,
       output_quantity: bomData.output_quantity,
       uom_id: bomData.uom_id ?? null,
       effective_from: bomData.effective_from,
@@ -142,6 +147,7 @@ export default function BOMDetailPage() {
       const { error: headerError } = await supabase.from('bom_headers').update({
         bom_code: values.bom_code,
         finished_item_id: values.finished_item_id,
+        subcontractor_id: values.subcontractor_id || null,
         output_quantity: values.output_quantity,
         uom_id: values.uom_id || null,
         effective_from: values.effective_from,
@@ -225,6 +231,7 @@ export default function BOMDetailPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4 text-sm">
               <div><div className="text-gray-500 text-xs uppercase font-medium mb-1">BOM Code</div><div className="font-mono font-medium">{bom.bom_code}</div></div>
               <div><div className="text-gray-500 text-xs uppercase font-medium mb-1">Finished Item</div><div>{bom.finished_item?.item_name}</div></div>
+              <div><div className="text-gray-500 text-xs uppercase font-medium mb-1">Subcontractor</div><div>{bom.subcontractor?.name ?? <span className="text-gray-400 italic">Any</span>}</div></div>
               <div><div className="text-gray-500 text-xs uppercase font-medium mb-1">Output Qty</div><div>{formatNumber(bom.output_quantity)} {bom.uom?.abbreviation ?? ''}</div></div>
               <div><div className="text-gray-500 text-xs uppercase font-medium mb-1">Effective From</div><div>{formatDate(bom.effective_from)}</div></div>
               <div><div className="text-gray-500 text-xs uppercase font-medium mb-1">Effective To</div><div>{bom.effective_to ? formatDate(bom.effective_to) : <span className="text-gray-400 italic">No end date</span>}</div></div>
@@ -277,6 +284,16 @@ export default function BOMDetailPage() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {finishedItems.map(i => <SelectItem key={i.id} value={i.id}>{i.item_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2 md:col-span-3 space-y-1">
+                <Label>Subcontractor <span className="text-gray-400 font-normal">(optional — restricts this BOM in production)</span></Label>
+                <Select value={watch('subcontractor_id') ?? '__none__'} onValueChange={v => setValue('subcontractor_id', v === '__none__' ? null : v)}>
+                  <SelectTrigger><SelectValue placeholder="Any subcontractor" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Any subcontractor</SelectItem>
+                    {subcontractors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

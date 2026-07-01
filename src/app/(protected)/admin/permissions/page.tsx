@@ -141,7 +141,7 @@ export default function PermissionsPage() {
 
       {selectedUser && selectedProfile && (
         <div className="mb-4 flex items-center gap-3">
-          <ShieldCheck className="w-5 h-5 text-blue-600" />
+          <ShieldCheck className="w-5 h-5 text-red-600" />
           <span className="text-sm text-gray-600">
             Editing permissions for <strong>{selectedProfile.full_name}</strong>
             {' '}<Badge className="ml-1 text-xs">{selectedProfile.role}</Badge>

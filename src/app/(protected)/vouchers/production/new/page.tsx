@@ -60,7 +60,7 @@ export default function NewProductionVoucherPage() {
         supabase
           .from('bom_headers')
           .select(`
-            id, bom_code, output_quantity,
+            id, bom_code, output_quantity, subcontractor_id,
             finished_item:items!finished_item_id(id, item_name),
             uom:uoms!uom_id(id, abbreviation),
             bom_items(
@@ -103,6 +103,12 @@ export default function NewProductionVoucherPage() {
     init();
   }, []);
 
+  // #5 — only BOMs assigned to the chosen subcontractor (plus unassigned ones)
+  // are selectable, so you can't accidentally pick another subcontractor's recipe.
+  const visibleBoms = subcontractorId
+    ? boms.filter(b => !b.subcontractor_id || b.subcontractor_id === subcontractorId)
+    : boms;
+
   // #11 — auto-select the subcontractor's default godown as the source godown
   // #5 — also default the finished-goods godown to that same assigned godown
   function handleSubcontractorChange(id: string) {
@@ -111,6 +117,16 @@ export default function NewProductionVoucherPage() {
     if (sub?.default_godown_id) {
       setSourceGodownId(sub.default_godown_id);
       setFinishedGodownId(sub.default_godown_id);
+    }
+    // If the currently selected BOM isn't valid for this subcontractor, clear it.
+    if (bomId) {
+      const current = boms.find(b => b.id === bomId);
+      if (current?.subcontractor_id && current.subcontractor_id !== id) {
+        setBomId('');
+        setSelectedBOM(null);
+        setProductionQty('');
+        setRawMaterials([]);
+      }
     }
   }
 
@@ -289,7 +305,10 @@ export default function NewProductionVoucherPage() {
                   <SelectValue placeholder="Select BOM..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {boms.map(b => (
+                  {visibleBoms.length === 0 && (
+                    <div className="px-2 py-1.5 text-sm text-gray-400">No BOM assigned to this subcontractor</div>
+                  )}
+                  {visibleBoms.map(b => (
                     <SelectItem key={b.id} value={b.id}>
                       {b.bom_code} — {b.finished_item?.item_name}
                     </SelectItem>
@@ -329,7 +348,7 @@ export default function NewProductionVoucherPage() {
 
         {/* BOM Summary */}
         {selectedBOM && (
-          <div className="border rounded-xl p-6 bg-blue-50/50 space-y-4">
+          <div className="border rounded-xl p-6 bg-red-50/50 space-y-4">
             <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Output</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">

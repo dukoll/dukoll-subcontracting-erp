@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 
 import { createClient } from '@/lib/supabase/client';
-import type { Item, UOM } from '@/types';
+import type { Item, UOM, Supplier } from '@/types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ const bomItemSchema = z.object({
 const schema = z.object({
   bom_code: z.string().min(1, 'BOM code is required').max(50),
   finished_item_id: z.string().min(1, 'Finished item is required'),
+  subcontractor_id: z.string().nullable().optional(),
   output_quantity: z.coerce.number().positive('Output qty must be positive'),
   uom_id: z.string().nullable().optional(),
   effective_from: z.string().min(1, 'Effective from date is required'),
@@ -58,6 +59,7 @@ function BOMNewForm() {
   const [finishedItems, setFinishedItems] = useState<Item[]>([]);
   const [allItems, setAllItems] = useState<Item[]>([]);
   const [uoms, setUoms] = useState<UOM[]>([]);
+  const [subcontractors, setSubcontractors] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [duplicatedCode, setDuplicatedCode] = useState<string | null>(null);
@@ -67,6 +69,7 @@ function BOMNewForm() {
     defaultValues: {
       bom_code: '',
       finished_item_id: '',
+      subcontractor_id: null,
       output_quantity: 1,
       uom_id: null,
       effective_from: new Date().toISOString().split('T')[0],
@@ -82,9 +85,10 @@ function BOMNewForm() {
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const [itemsRes, uomsRes, existingBoms] = await Promise.all([
+      const [itemsRes, uomsRes, subsRes, existingBoms] = await Promise.all([
         supabase.from('items').select('*').eq('is_active', true).order('item_name'),
         supabase.from('uoms').select('*').eq('is_active', true).order('name'),
+        supabase.from('suppliers').select('id,name').eq('is_active', true).eq('is_subcontractor', true).order('name'),
         supabase.from('bom_headers').select('bom_code').order('bom_code', { ascending: false }).limit(1),
       ]);
 
@@ -92,6 +96,7 @@ function BOMNewForm() {
       setFinishedItems(items.filter(i => i.item_type === 'finished_goods'));
       setAllItems(items.filter(i => ['raw_material', 'packing_material'].includes(i.item_type)));
       setUoms(uomsRes.data ?? []);
+      setSubcontractors((subsRes.data ?? []) as Supplier[]);
 
       const suggestedCode = nextCodeFrom(existingBoms.data?.[0]?.bom_code);
 
@@ -102,11 +107,12 @@ function BOMNewForm() {
           supabase.from('bom_items').select('*').eq('bom_id', duplicateFrom).order('seq_no', { ascending: true, nullsFirst: false }),
         ]);
         if (src) {
-          const srcHeader = src as { bom_code: string; finished_item_id: string; output_quantity: number; uom_id: string | null; effective_to: string | null; notes: string | null };
+          const srcHeader = src as { bom_code: string; finished_item_id: string; subcontractor_id: string | null; output_quantity: number; uom_id: string | null; effective_to: string | null; notes: string | null };
           setDuplicatedCode(srcHeader.bom_code);
           reset({
             bom_code: suggestedCode,
             finished_item_id: srcHeader.finished_item_id,
+            subcontractor_id: srcHeader.subcontractor_id ?? null,
             output_quantity: srcHeader.output_quantity,
             uom_id: srcHeader.uom_id ?? null,
             effective_from: new Date().toISOString().split('T')[0],
@@ -141,6 +147,7 @@ function BOMNewForm() {
         .insert({
           bom_code: values.bom_code,
           finished_item_id: values.finished_item_id,
+          subcontractor_id: values.subcontractor_id || null,
           output_quantity: values.output_quantity,
           uom_id: values.uom_id || null,
           effective_from: values.effective_from,
@@ -230,6 +237,17 @@ function BOMNewForm() {
                 </SelectContent>
               </Select>
               {errors.finished_item_id && <p className="text-xs text-red-500">{errors.finished_item_id.message}</p>}
+            </div>
+
+            <div className="col-span-2 md:col-span-3 space-y-1">
+              <Label>Subcontractor <span className="text-gray-400 font-normal">(optional — restricts this BOM to one subcontractor in production)</span></Label>
+              <Select value={watch('subcontractor_id') ?? '__none__'} onValueChange={v => setValue('subcontractor_id', v === '__none__' ? null : v)}>
+                <SelectTrigger><SelectValue placeholder="Any subcontractor" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Any subcontractor</SelectItem>
+                  {subcontractors.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1">

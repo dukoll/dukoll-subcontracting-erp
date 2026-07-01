@@ -20,7 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 const ROLE_BADGE: Record<UserRole, string> = {
   admin: 'bg-purple-100 text-purple-800',
-  accounting: 'bg-blue-100 text-blue-800',
+  accounting: 'bg-indigo-100 text-indigo-800',
   store: 'bg-green-100 text-green-800',
   production: 'bg-orange-100 text-orange-800',
   viewer: 'bg-gray-100 text-gray-800',
@@ -29,6 +29,7 @@ const ROLE_BADGE: Record<UserRole, string> = {
 const ALL_ROLES: UserRole[] = ['admin', 'accounting', 'store', 'production', 'viewer'];
 
 const EMPTY_FORM = { full_name: '', phone: '', role: 'viewer' as UserRole, is_active: true };
+const EMPTY_CREATE = { username: '', email: '', password: '', full_name: '', role: 'viewer' as UserRole };
 
 export default function UsersPage() {
   const [role, setRole] = useState<UserRole | null>(null);
@@ -39,6 +40,9 @@ export default function UsersPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState(EMPTY_CREATE);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -101,17 +105,43 @@ export default function UsersPage() {
     else { toast.success(`User ${user.is_active ? 'deactivated' : 'activated'}.`); loadUsers(); }
   }
 
+  function openCreate() {
+    setCreateForm(EMPTY_CREATE);
+    setCreateOpen(true);
+  }
+
+  async function handleCreate() {
+    if (!createForm.username.trim() || !createForm.email.trim() || !createForm.password) {
+      toast.error('Username, email and password are required.'); return;
+    }
+    if (createForm.password.length < 6) { toast.error('Password must be at least 6 characters.'); return; }
+    setCreating(true);
+    try {
+      const res = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Failed to create user');
+      toast.success('User created.');
+      setCreateOpen(false);
+      loadUsers();
+    } catch (err: unknown) {
+      toast.error((err as Error).message);
+    } finally {
+      setCreating(false);
+    }
+  }
+
   return (
     <div className="p-6">
       <PageHeader
         title="User Management"
-        description="Manage user roles and access"
+        description="Create users and manage their roles and access"
         breadcrumbs={[{ label: 'Admin' }, { label: 'Users' }]}
         actions={
-          <div className="flex items-center gap-2 text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded px-3 py-1.5">
-            <UserPlus className="w-4 h-4 text-blue-500" />
-            New users are invited via Supabase Auth (email invitation), then set their role here.
-          </div>
+          <Button onClick={openCreate}><UserPlus className="w-4 h-4 mr-1" />New User</Button>
         }
       />
 
@@ -201,6 +231,53 @@ export default function UsersPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create User */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New User</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1.5">
+                <Label>Username *</Label>
+                <Input value={createForm.username} onChange={e => setCreateForm(f => ({ ...f, username: e.target.value }))} placeholder="e.g. ramesh" />
+              </div>
+              <div className="grid gap-1.5">
+                <Label>Full Name</Label>
+                <Input value={createForm.full_name} onChange={e => setCreateForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Ramesh Patel" />
+              </div>
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Email *</Label>
+              <Input type="email" value={createForm.email} onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))} placeholder="ramesh@dukoll.in" />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Password *</Label>
+              <Input type="text" value={createForm.password} onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))} placeholder="Min 6 characters" />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Role</Label>
+              <Select value={createForm.role} onValueChange={v => setCreateForm(f => ({ ...f, role: v as UserRole }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ALL_ROLES.map(r => (
+                    <SelectItem key={r} value={r}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${ROLE_BADGE[r]}`}>{roleLabel(r)}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-gray-500">The user can sign in with either the username or the email, using this password.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreate} disabled={creating}>{creating ? 'Creating...' : 'Create User'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -28,7 +28,7 @@ interface LedgerRow {
 
 const VOUCHER_COLORS: Record<string, string> = {
   purchase: 'bg-green-100 text-green-800',
-  production: 'bg-blue-100 text-blue-800',
+  production: 'bg-indigo-100 text-indigo-800',
   sales: 'bg-red-100 text-red-800',
   transfer: 'bg-purple-100 text-purple-800',
 };

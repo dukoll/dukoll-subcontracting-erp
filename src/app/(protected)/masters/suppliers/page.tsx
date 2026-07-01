@@ -262,7 +262,7 @@ export default function SuppliersPage() {
               </div>
             </div>
             {isSubcontractor && (
-              <div className="space-y-1 rounded-lg bg-blue-50/60 border border-blue-100 p-3">
+              <div className="space-y-1 rounded-lg bg-red-50/60 border border-red-100 p-3">
                 <Label>Default Godown</Label>
                 <Select value={watch('default_godown_id') ?? '__none__'} onValueChange={v => setValue('default_godown_id', v === '__none__' ? null : v)}>
                   <SelectTrigger><SelectValue placeholder="Select this subcontractor's godown" /></SelectTrigger>

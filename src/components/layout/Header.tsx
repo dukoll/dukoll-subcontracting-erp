@@ -58,7 +58,7 @@ export function Header({ userName, role, onMenuClick }: HeaderProps) {
           onClick={() => setDropOpen(v => !v)}
           className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition touch-target"
         >
-          <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+          <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
             {initials}
           </div>
           <div className="hidden sm:block text-left">
