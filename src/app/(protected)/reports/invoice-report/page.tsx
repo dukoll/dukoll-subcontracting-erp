@@ -7,6 +7,7 @@ import { formatDate, formatCurrency, formatNumber } from '@/lib/utils';
 import type { UserRole, Supplier } from '@/types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { AccessDenied } from '@/components/shared/AccessDenied';
+import { DateRangeFilter, daysAgoISO } from '@/components/shared/DateRangeFilter';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +33,7 @@ export default function InvoiceReportPage() {
   const [subcontractors, setSubcontractors] = useState<Supplier[]>([]);
   const [rows, setRows] = useState<InvoiceRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filterFrom, setFilterFrom] = useState('');
+  const [filterFrom, setFilterFrom] = useState(() => daysAgoISO(7));
   const [filterTo, setFilterTo] = useState(() => new Date().toISOString().split('T')[0]);
   const [filterSub, setFilterSub] = useState('');
 
@@ -131,13 +132,8 @@ export default function InvoiceReportPage() {
 
       <div className="bg-white border rounded-lg p-4 mb-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <div className="grid gap-1.5">
-            <Label>From Date</Label>
-            <Input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} />
-          </div>
-          <div className="grid gap-1.5">
-            <Label>To Date</Label>
-            <Input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} />
+          <div className="col-span-2">
+            <DateRangeFilter from={filterFrom} to={filterTo} onChange={(f, t) => { setFilterFrom(f); setFilterTo(t); }} />
           </div>
           <div className="grid gap-1.5">
             <Label>Subcontractor</Label>

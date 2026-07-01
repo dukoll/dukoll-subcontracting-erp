@@ -54,8 +54,17 @@ export default function GodownsPage() {
   const [editing, setEditing] = useState<Godown | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Godown | null>(null);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const role = useRole();
   const isAdmin = role === 'admin';
+
+  const q = search.trim().toLowerCase();
+  const filteredGodowns = godowns.filter(g => {
+    if (typeFilter && g.godown_type !== typeFilter) return false;
+    if (q && !g.name.toLowerCase().includes(q)) return false;
+    return true;
+  });
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -148,6 +157,18 @@ export default function GodownsPage() {
       ) : godowns.length === 0 ? (
         <EmptyState icon={Warehouse} title="No godowns" description="Create your first storage location." action={isAdmin ? <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4 mr-1" />Add Godown</Button> : undefined} />
       ) : (
+        <>
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <Input className="w-full sm:w-72" placeholder="Search godown name…" value={search} onChange={e => setSearch(e.target.value)} />
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-52"><SelectValue placeholder="All types" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All types</SelectItem>
+              {GODOWN_TYPES.map(t => <SelectItem key={t} value={t}>{godownTypeLabel(t)}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {(search || typeFilter) && <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setTypeFilter(''); }}>Clear</Button>}
+        </div>
         <div className="rounded-lg border bg-white overflow-hidden">
           <Table>
             <TableHeader>
@@ -160,7 +181,10 @@ export default function GodownsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {godowns.map(g => (
+              {filteredGodowns.length === 0 && (
+                <TableRow><TableCell colSpan={isAdmin ? 5 : 4} className="text-center text-gray-400 py-8">No godowns match your filters.</TableCell></TableRow>
+              )}
+              {filteredGodowns.map(g => (
                 <TableRow key={g.id}>
                   <TableCell className="font-medium">{g.name}</TableCell>
                   <TableCell><Badge variant="outline">{godownTypeLabel(g.godown_type)}</Badge></TableCell>
@@ -179,6 +203,7 @@ export default function GodownsPage() {
             </TableBody>
           </Table>
         </div>
+        </>
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

@@ -84,3 +84,14 @@ export function voucherStatusColor(status: string): string {
   };
   return map[status] ?? 'bg-gray-100 text-gray-800';
 }
+
+// A submitted voucher is stored as 'approved' (the status that affects stock).
+// Show it to users as "Submitted" so the draft → submit workflow reads clearly.
+export function voucherStatusLabel(status: string): string {
+  const map: Record<string, string> = {
+    approved: 'Submitted',
+    draft: 'Draft',
+    cancelled: 'Cancelled',
+  };
+  return map[status] ?? capitalize(status);
+}

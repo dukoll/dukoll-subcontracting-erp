@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Pencil, Printer, Trash2, Save, X, Loader2 } from 'lucide-react';
+import { ArrowLeft, Pencil, Printer, Trash2, Save, X, Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { createClient } from '@/lib/supabase/client';
 import { canSeePricing } from '@/lib/permissions';
-import { formatDate, formatNumber, formatCurrency, voucherStatusColor } from '@/lib/utils';
+import { formatDate, formatNumber, formatCurrency, voucherStatusColor, voucherStatusLabel } from '@/lib/utils';
 import { openPrintWindow, esc } from '@/lib/print';
 import type { UserRole, Supplier, Godown, BOMHeader, ProductionVoucher, ProductionVoucherItem } from '@/types';
 
@@ -151,6 +151,15 @@ export default function ProductionVoucherDetailPage() {
     }
   }
 
+  async function handleSubmitVoucher() {
+    setSaving(true);
+    const supabase = createClient();
+    const { error } = await supabase.from('production_vouchers').update({ status: 'approved' }).eq('id', id);
+    setSaving(false);
+    if (error) toast.error(error.message);
+    else { toast.success('Production voucher submitted — stock updated'); fetchVoucher(); }
+  }
+
   async function handleDelete() {
     const supabase = createClient();
     await supabase.from('production_voucher_items').delete().eq('voucher_id', id);
@@ -206,7 +215,12 @@ export default function ProductionVoucherDetailPage() {
             {!editMode && (
               <>
                 <Button size="sm" variant="outline" onClick={printVoucher}><Printer className="w-4 h-4 mr-1" />Print</Button>
-                {canEdit && <Button size="sm" onClick={() => setEditMode(true)}><Pencil className="w-4 h-4 mr-1" />Edit</Button>}
+                {canEdit && voucher.status === 'draft' && (
+                  <Button size="sm" onClick={handleSubmitVoucher} disabled={saving} className="bg-green-600 hover:bg-green-700">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Send className="w-4 h-4 mr-1" />}Submit
+                  </Button>
+                )}
+                {canEdit && <Button size="sm" variant="outline" onClick={() => setEditMode(true)}><Pencil className="w-4 h-4 mr-1" />Edit</Button>}
                 {role === 'admin' && <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}><Trash2 className="w-4 h-4 mr-1" />Delete</Button>}
               </>
             )}
@@ -225,7 +239,7 @@ export default function ProductionVoucherDetailPage() {
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold">Production Details</h2>
-              <Badge className={voucherStatusColor(voucher.status)}>{voucher.status.charAt(0).toUpperCase() + voucher.status.slice(1)}</Badge>
+              <Badge className={voucherStatusColor(voucher.status)}>{voucherStatusLabel(voucher.status)}</Badge>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4 text-sm">
               <div><div className="text-gray-500 text-xs uppercase font-medium mb-1">Voucher No</div><div className="font-mono font-medium">{voucher.voucher_no}</div></div>

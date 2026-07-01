@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { createClient } from '@/lib/supabase/client';
 import { formatNumber } from '@/lib/utils';
-import type { Supplier, Godown, BOMHeader } from '@/types';
+import type { Supplier, Godown, BOMHeader, Item } from '@/types';
 
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -18,13 +19,13 @@ import {
 } from '@/components/ui/select';
 
 interface RawMaterialRow {
-  bom_item_id: string;
+  id: string;               // stable react key
   item_id: string;
-  item_name: string;
   uom_abbr: string;
   uom_id: string | null;
-  base_qty: number;
+  base_qty: number;         // per-BOM base qty (0 for manually added rows)
   required_qty: number;
+  touched: boolean;         // user edited item/qty → keep as-is on rescale
 }
 
 export default function NewProductionVoucherPage() {
@@ -32,6 +33,8 @@ export default function NewProductionVoucherPage() {
   const [subcontractors, setSubcontractors] = useState<Supplier[]>([]);
   const [boms, setBoms] = useState<BOMHeader[]>([]);
   const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
+  const [previewNo, setPreviewNo] = useState('PR-001');
   const [saving, setSaving] = useState(false);
 
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -47,7 +50,7 @@ export default function NewProductionVoucherPage() {
   useEffect(() => {
     async function init() {
       const supabase = createClient();
-      const [{ data: subs }, { data: bomList }, { data: gdwn }] = await Promise.all([
+      const [{ data: subs }, { data: bomList }, { data: gdwn }, { data: itm }] = await Promise.all([
         supabase
           .from('suppliers')
           .select('id,name,default_godown_id')
@@ -73,39 +76,59 @@ export default function NewProductionVoucherPage() {
           .select('id,name')
           .eq('is_active', true)
           .order('name'),
+        supabase
+          .from('items')
+          .select('id,item_name,uom_id,uom:uoms(id,abbreviation)')
+          .in('item_type', ['raw_material', 'packing_material'])
+          .eq('is_active', true)
+          .order('item_name'),
       ]);
       setSubcontractors((subs ?? []) as Supplier[]);
       setBoms((bomList ?? []) as BOMHeader[]);
       setGodowns((gdwn ?? []) as Godown[]);
+      setItems((itm ?? []) as Item[]);
+
+      // #3 — preview the next sequential voucher no (the DB trigger assigns the
+      // authoritative value on insert; this is a best-effort display).
+      const { data: last } = await supabase
+        .from('production_vouchers')
+        .select('voucher_no')
+        .ilike('voucher_no', 'PR-%')
+        .order('voucher_no', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const nextN = last?.voucher_no ? (parseInt(last.voucher_no.split('-')[1], 10) || 0) + 1 : 1;
+      setPreviewNo(`PR-${String(nextN).padStart(3, '0')}`);
     }
     init();
   }, []);
 
   // #11 — auto-select the subcontractor's default godown as the source godown
+  // #5 — also default the finished-goods godown to that same assigned godown
   function handleSubcontractorChange(id: string) {
     setSubcontractorId(id);
     const sub = subcontractors.find(s => s.id === id);
-    if (sub?.default_godown_id) setSourceGodownId(sub.default_godown_id);
+    if (sub?.default_godown_id) {
+      setSourceGodownId(sub.default_godown_id);
+      setFinishedGodownId(sub.default_godown_id);
+    }
   }
 
-  const recalcRawMaterials = useCallback(
-    (bom: BOMHeader, prodQty: number) => {
-      if (!bom.bom_items || bom.bom_items.length === 0) { setRawMaterials([]); return; }
-      const baseOutput = bom.output_quantity || 1;
-      const scale = prodQty / baseOutput;
-      const rows: RawMaterialRow[] = bom.bom_items.map(bi => ({
-        bom_item_id: bi.id,
-        item_id: bi.item_id,
-        item_name: bi.item?.item_name ?? '—',
-        uom_abbr: bi.uom?.abbreviation ?? '',
-        uom_id: bi.uom_id ?? null,
-        base_qty: bi.quantity,
-        required_qty: parseFloat((bi.quantity * scale).toFixed(4)),
-      }));
-      setRawMaterials(rows);
-    },
-    []
-  );
+  // Build fresh rows from the BOM defaults (called when a BOM is selected).
+  const buildRowsFromBOM = useCallback((bom: BOMHeader, prodQty: number) => {
+    if (!bom.bom_items || bom.bom_items.length === 0) { setRawMaterials([]); return; }
+    const scale = prodQty / (bom.output_quantity || 1);
+    const rows: RawMaterialRow[] = bom.bom_items.map(bi => ({
+      id: crypto.randomUUID(),
+      item_id: bi.item_id,
+      uom_abbr: bi.uom?.abbreviation ?? '',
+      uom_id: bi.uom_id ?? null,
+      base_qty: bi.quantity,
+      required_qty: parseFloat((bi.quantity * scale).toFixed(4)),
+      touched: false,
+    }));
+    setRawMaterials(rows);
+  }, []);
 
   function handleBOMChange(id: string) {
     setBomId(id);
@@ -114,19 +137,44 @@ export default function NewProductionVoucherPage() {
     if (bom) {
       const defaultProdQty = bom.output_quantity;
       setProductionQty(String(defaultProdQty));
-      recalcRawMaterials(bom, defaultProdQty);
+      buildRowsFromBOM(bom, defaultProdQty);
     } else {
       setProductionQty('');
       setRawMaterials([]);
     }
   }
 
+  // Rescale only untouched (BOM-derived) rows so manual edits/added rows persist.
   function handleProductionQtyChange(val: string) {
     setProductionQty(val);
     const qty = parseFloat(val);
     if (selectedBOM && !isNaN(qty) && qty > 0) {
-      recalcRawMaterials(selectedBOM, qty);
+      const scale = qty / (selectedBOM.output_quantity || 1);
+      setRawMaterials(prev => prev.map(r =>
+        r.touched ? r : { ...r, required_qty: parseFloat((r.base_qty * scale).toFixed(4)) }
+      ));
     }
+  }
+
+  // #7 — raw materials are editable for this voucher only (BOM master unchanged)
+  function handleRawItemChange(rowId: string, itemId: string) {
+    const item = items.find(i => i.id === itemId);
+    setRawMaterials(prev => prev.map(r => r.id === rowId
+      ? { ...r, item_id: itemId, uom_id: item?.uom_id ?? null, uom_abbr: item?.uom?.abbreviation ?? '', touched: true }
+      : r));
+  }
+  function handleRawQtyChange(rowId: string, val: string) {
+    setRawMaterials(prev => prev.map(r => r.id === rowId
+      ? { ...r, required_qty: parseFloat(val) || 0, touched: true }
+      : r));
+  }
+  function addRawRow() {
+    setRawMaterials(prev => [...prev, {
+      id: crypto.randomUUID(), item_id: '', uom_abbr: '', uom_id: null, base_qty: 0, required_qty: 0, touched: true,
+    }]);
+  }
+  function removeRawRow(rowId: string) {
+    setRawMaterials(prev => prev.filter(r => r.id !== rowId));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -136,6 +184,8 @@ export default function NewProductionVoucherPage() {
     if (!finishedGodownId) { toast.error('Please select finished goods godown'); return; }
     const prodQty = parseFloat(productionQty);
     if (isNaN(prodQty) || prodQty <= 0) { toast.error('Enter a valid production quantity'); return; }
+    const validRaw = rawMaterials.filter(r => r.item_id && r.required_qty > 0);
+    if (validRaw.length === 0) { toast.error('Add at least one raw material with quantity'); return; }
 
     setSaving(true);
     const supabase = createClient();
@@ -162,7 +212,7 @@ export default function NewProductionVoucherPage() {
       if (vErr || !voucher) throw new Error(vErr?.message ?? 'Failed to create voucher');
 
       const itemRows = [
-        ...rawMaterials.map((r, idx) => ({
+        ...validRaw.map((r, idx) => ({
           voucher_id: voucher.id,
           item_id: r.item_id,
           quantity: r.required_qty,
@@ -178,7 +228,7 @@ export default function NewProductionVoucherPage() {
           uom_id: bom.uom_id ?? null,
           godown_id: finishedGodownId,
           movement_type: 'produced' as const,
-          seq_no: rawMaterials.length + 1,
+          seq_no: validRaw.length + 1,
         },
       ];
 
@@ -213,7 +263,7 @@ export default function NewProductionVoucherPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label>Voucher No</Label>
-              <Input value="Auto-generated on save (PR-001…)" readOnly className="bg-gray-50 text-gray-400 text-sm" />
+              <Input value={previewNo} readOnly className="bg-gray-50 font-mono font-medium" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="date">Date *</Label>
@@ -313,34 +363,63 @@ export default function NewProductionVoucherPage() {
           </div>
         )}
 
-        {/* Raw Materials */}
-        {rawMaterials.length > 0 && (
+        {/* Raw Materials — prefilled from BOM, editable for this voucher only (#7) */}
+        {selectedBOM && (
           <div className="border rounded-xl p-6 bg-white">
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
-              Raw Materials Required
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                Raw Materials Required
+              </h2>
+              <Button type="button" variant="outline" size="sm" onClick={addRawRow}>
+                <Plus className="w-4 h-4 mr-1" /> Add Item
+              </Button>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50">
-                    <th className="text-left p-2 font-medium text-gray-600">Item</th>
-                    <th className="text-right p-2 font-medium text-gray-600 w-40">Required Qty</th>
+                    <th className="text-left p-2 font-medium text-gray-600 min-w-[220px]">Item</th>
+                    <th className="text-left p-2 font-medium text-gray-600 w-40">Required Qty</th>
                     <th className="text-left p-2 font-medium text-gray-600 w-24">UOM</th>
+                    <th className="w-10" />
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {rawMaterials.map((r) => (
-                    <tr key={r.bom_item_id}>
-                      <td className="p-2 font-medium">{r.item_name}</td>
-                      <td className="p-2 text-right font-mono">{formatNumber(r.required_qty)}</td>
-                      <td className="p-2 text-gray-500">{r.uom_abbr}</td>
+                    <tr key={r.id}>
+                      <td className="p-1.5">
+                        <Select value={r.item_id} onValueChange={v => handleRawItemChange(r.id, v)}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Select item..." /></SelectTrigger>
+                          <SelectContent>
+                            {items.map(i => <SelectItem key={i.id} value={i.id}>{i.item_name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="p-1.5">
+                        <Input
+                          type="number" min="0" step="0.001"
+                          value={r.required_qty}
+                          onChange={e => handleRawQtyChange(r.id, e.target.value)}
+                          className="h-9"
+                        />
+                      </td>
+                      <td className="p-1.5 text-gray-500">{r.uom_abbr}</td>
+                      <td className="p-1.5">
+                        <Button
+                          type="button" variant="ghost" size="sm"
+                          className="h-9 w-9 p-0 text-gray-400 hover:text-red-500"
+                          onClick={() => removeRawRow(r.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             <p className="text-xs text-gray-400 mt-3">
-              Quantities auto-scaled from BOM base output of {formatNumber(selectedBOM?.output_quantity ?? 0)} {selectedBOM?.uom?.abbreviation ?? ''}. All consumed from the selected source godown.
+              Prefilled from BOM (auto-scaled from base output of {formatNumber(selectedBOM?.output_quantity ?? 0)} {selectedBOM?.uom?.abbreviation ?? ''}). Edit items or quantities for this voucher only — the BOM master is not affected. All consumed from the selected source godown.
             </p>
           </div>
         )}

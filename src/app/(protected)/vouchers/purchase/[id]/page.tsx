@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Pencil, Printer, Trash2, Save, X, Plus, Loader2 } from 'lucide-react';
+import { ArrowLeft, Pencil, Printer, Trash2, Save, X, Plus, Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { createClient } from '@/lib/supabase/client';
 import { canSeePricing } from '@/lib/permissions';
-import { formatDate, formatNumber, formatCurrency, voucherStatusColor } from '@/lib/utils';
+import { formatDate, formatNumber, formatCurrency, voucherStatusColor, voucherStatusLabel } from '@/lib/utils';
 import { openPrintWindow, esc } from '@/lib/print';
 import type { UserRole, Supplier, Item, Godown, PurchaseVoucher, PurchaseVoucherItem } from '@/types';
 
@@ -28,7 +28,6 @@ interface EditLine {
   item_id: string;
   quantity: string;
   uom_id: string | null;
-  godown_id: string;
   rate: string;
 }
 
@@ -50,6 +49,7 @@ export default function PurchaseVoucherDetailPage() {
   const [date, setDate] = useState('');
   const [supplierId, setSupplierId] = useState('');
   const [invDate, setInvDate] = useState('');
+  const [godownId, setGodownId] = useState('');
   const [remarks, setRemarks] = useState('');
   const [lines, setLines] = useState<EditLine[]>([]);
 
@@ -84,9 +84,10 @@ export default function PurchaseVoucherDetailPage() {
     setDate(vData.date);
     setSupplierId(vData.supplier_id ?? '');
     setInvDate(vData.supplier_invoice_date ?? '');
+    setGodownId((vi ?? [])[0]?.godown_id ?? '');
     setRemarks(vData.notes ?? '');
     setLines((vi ?? []).map((r) => ({
-      id: crypto.randomUUID(), item_id: r.item_id, quantity: String(r.quantity), uom_id: r.uom_id, godown_id: r.godown_id ?? '', rate: r.rate != null ? String(r.rate) : '',
+      id: crypto.randomUUID(), item_id: r.item_id, quantity: String(r.quantity), uom_id: r.uom_id, rate: r.rate != null ? String(r.rate) : '',
     })));
     setLoading(false);
   }, [id, router]);
@@ -100,7 +101,7 @@ export default function PurchaseVoucherDetailPage() {
   function setLineField(lineId: string, field: keyof EditLine, value: string) {
     setLines(prev => prev.map(l => l.id === lineId ? { ...l, [field]: value } : l));
   }
-  function addLine() { setLines(prev => [...prev, { id: crypto.randomUUID(), item_id: '', quantity: '', uom_id: null, godown_id: '', rate: '' }]); }
+  function addLine() { setLines(prev => [...prev, { id: crypto.randomUUID(), item_id: '', quantity: '', uom_id: null, rate: '' }]); }
   function removeLine(lineId: string) { setLines(prev => prev.length > 1 ? prev.filter(l => l.id !== lineId) : prev); }
 
   async function handleSave() {
@@ -129,7 +130,7 @@ export default function PurchaseVoucherDetailPage() {
         item_id: l.item_id,
         quantity: parseFloat(l.quantity),
         uom_id: l.uom_id,
-        godown_id: l.godown_id || null,
+        godown_id: godownId || null,
         rate: showPricing && l.rate ? parseFloat(l.rate) : null,
         amount: showPricing && l.rate ? parseFloat(l.quantity) * parseFloat(l.rate) : null,
         seq_no: idx + 1,
@@ -148,6 +149,15 @@ export default function PurchaseVoucherDetailPage() {
     }
   }
 
+  async function handleSubmitVoucher() {
+    setSaving(true);
+    const supabase = createClient();
+    const { error } = await supabase.from('purchase_vouchers').update({ status: 'approved' }).eq('id', id);
+    setSaving(false);
+    if (error) toast.error(error.message);
+    else { toast.success('Purchase voucher submitted — stock updated'); fetchVoucher(); }
+  }
+
   async function handleDelete() {
     const supabase = createClient();
     await supabase.from('purchase_voucher_items').delete().eq('voucher_id', id);
@@ -164,9 +174,9 @@ export default function PurchaseVoucherDetailPage() {
         <td>${esc(it.item?.item_name ?? '')}</td>
         <td class="num">${formatNumber(it.quantity)}</td>
         <td>${esc(it.uom?.abbreviation ?? '')}</td>
-        <td>${esc(it.godown?.name ?? '')}</td>
         ${showPricing ? `<td class="num">${it.rate != null ? formatNumber(it.rate, 2) : ''}</td><td class="num">${it.amount != null ? formatNumber(it.amount, 2) : ''}</td>` : ''}
       </tr>`).join('');
+    const godownName = items[0]?.godown?.name ?? '—';
     const html = `
       <div class="doc-title">Purchase Voucher</div>
       <hr class="rule" />
@@ -177,13 +187,14 @@ export default function PurchaseVoucherDetailPage() {
         </div>
         <div style="text-align:right">
           <p><span class="label">Supplier:</span> ${esc(voucher.supplier?.name ?? '—')}</p>
+          <p><span class="label">Godown:</span> ${esc(godownName)}</p>
           ${voucher.supplier_invoice_date ? `<p><span class="label">Invoice Date:</span> ${esc(formatDate(voucher.supplier_invoice_date))}</p>` : ''}
         </div>
       </div>
       <table>
-        <thead><tr><th style="width:42px">#</th><th>Item</th><th class="num" style="width:120px">Quantity</th><th style="width:80px">UOM</th><th>Godown</th>${showPricing ? '<th class="num">Rate</th><th class="num">Amount</th>' : ''}</tr></thead>
-        <tbody>${rows || '<tr><td colspan="5">No items</td></tr>'}</tbody>
-        ${showPricing && voucher.total_amount != null ? `<tfoot><tr class="total-row"><td colspan="6" class="num">Total</td><td class="num">${formatNumber(voucher.total_amount, 2)}</td></tr></tfoot>` : ''}
+        <thead><tr><th style="width:42px">#</th><th>Item</th><th class="num" style="width:120px">Quantity</th><th style="width:80px">UOM</th>${showPricing ? '<th class="num">Rate</th><th class="num">Amount</th>' : ''}</tr></thead>
+        <tbody>${rows || '<tr><td colspan="4">No items</td></tr>'}</tbody>
+        ${showPricing && voucher.total_amount != null ? `<tfoot><tr class="total-row"><td colspan="5" class="num">Total</td><td class="num">${formatNumber(voucher.total_amount, 2)}</td></tr></tfoot>` : ''}
       </table>
       ${voucher.notes ? `<div class="remarks"><span class="label">Remarks:</span> ${esc(voucher.notes)}</div>` : ''}
       <div class="footer"><div class="sign">Prepared By</div><div class="sign">Authorised Signatory</div></div>`;
@@ -205,7 +216,12 @@ export default function PurchaseVoucherDetailPage() {
             {!editMode && (
               <>
                 <Button size="sm" variant="outline" onClick={printVoucher}><Printer className="w-4 h-4 mr-1" />Print</Button>
-                {canEdit && <Button size="sm" onClick={() => setEditMode(true)}><Pencil className="w-4 h-4 mr-1" />Edit</Button>}
+                {canEdit && voucher.status === 'draft' && (
+                  <Button size="sm" onClick={handleSubmitVoucher} disabled={saving} className="bg-green-600 hover:bg-green-700">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Send className="w-4 h-4 mr-1" />}Submit
+                  </Button>
+                )}
+                {canEdit && <Button size="sm" variant="outline" onClick={() => setEditMode(true)}><Pencil className="w-4 h-4 mr-1" />Edit</Button>}
                 {role === 'admin' && <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}><Trash2 className="w-4 h-4 mr-1" />Delete</Button>}
               </>
             )}
@@ -224,13 +240,14 @@ export default function PurchaseVoucherDetailPage() {
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold">Voucher Details</h2>
-              <Badge className={voucherStatusColor(voucher.status)}>{voucher.status.charAt(0).toUpperCase() + voucher.status.slice(1)}</Badge>
+              <Badge className={voucherStatusColor(voucher.status)}>{voucherStatusLabel(voucher.status)}</Badge>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4 text-sm">
               <div><div className="text-gray-500 text-xs uppercase font-medium mb-1">Supplier Invoice No</div><div className="font-mono font-medium">{voucher.voucher_no}</div></div>
               <div><div className="text-gray-500 text-xs uppercase font-medium mb-1">Date</div><div>{formatDate(voucher.date)}</div></div>
               <div><div className="text-gray-500 text-xs uppercase font-medium mb-1">Supplier</div><div>{voucher.supplier?.name ?? '—'}</div></div>
               <div><div className="text-gray-500 text-xs uppercase font-medium mb-1">Invoice Date</div><div>{voucher.supplier_invoice_date ? formatDate(voucher.supplier_invoice_date) : '—'}</div></div>
+              <div><div className="text-gray-500 text-xs uppercase font-medium mb-1">Godown</div><div>{items[0]?.godown?.name ?? '—'}</div></div>
               {showPricing && <div><div className="text-gray-500 text-xs uppercase font-medium mb-1">Total Amount</div><div className="font-medium">{formatCurrency(voucher.total_amount)}</div></div>}
               {voucher.notes && <div className="col-span-2 md:col-span-3"><div className="text-gray-500 text-xs uppercase font-medium mb-1">Remarks</div><div className="text-gray-700">{voucher.notes}</div></div>}
             </div>
@@ -246,7 +263,6 @@ export default function PurchaseVoucherDetailPage() {
                     <TableHead>Item</TableHead>
                     <TableHead className="text-right">Quantity</TableHead>
                     <TableHead>UOM</TableHead>
-                    <TableHead>Godown</TableHead>
                     {showPricing && <TableHead className="text-right">Rate</TableHead>}
                     {showPricing && <TableHead className="text-right">Amount</TableHead>}
                   </TableRow>
@@ -258,7 +274,6 @@ export default function PurchaseVoucherDetailPage() {
                       <TableCell className="font-medium text-sm">{it.item?.item_name}</TableCell>
                       <TableCell className="text-right font-mono text-sm">{formatNumber(it.quantity)}</TableCell>
                       <TableCell className="text-sm text-gray-500">{it.uom?.abbreviation ?? '—'}</TableCell>
-                      <TableCell className="text-sm text-gray-500">{it.godown?.name ?? '—'}</TableCell>
                       {showPricing && <TableCell className="text-right text-sm">{it.rate != null ? formatNumber(it.rate, 2) : '—'}</TableCell>}
                       {showPricing && <TableCell className="text-right text-sm">{it.amount != null ? formatNumber(it.amount, 2) : '—'}</TableCell>}
                     </TableRow>
@@ -283,6 +298,13 @@ export default function PurchaseVoucherDetailPage() {
                 </Select>
               </div>
               <div className="space-y-1.5"><Label>Invoice Date</Label><Input type="date" value={invDate} onChange={e => setInvDate(e.target.value)} /></div>
+              <div className="space-y-1.5">
+                <Label>Godown *</Label>
+                <Select value={godownId} onValueChange={setGodownId}>
+                  <SelectTrigger><SelectValue placeholder="Select godown" /></SelectTrigger>
+                  <SelectContent>{godowns.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
             </div>
           </Card>
 
@@ -297,7 +319,6 @@ export default function PurchaseVoucherDetailPage() {
                   <tr className="border-b bg-gray-50">
                     <th className="text-left p-2 font-medium text-gray-600 min-w-[180px]">Item</th>
                     <th className="text-left p-2 font-medium text-gray-600 w-24">Qty</th>
-                    <th className="text-left p-2 font-medium text-gray-600 min-w-[150px]">Godown</th>
                     {showPricing && <th className="text-left p-2 font-medium text-gray-600 w-24">Rate</th>}
                     <th className="w-10" />
                   </tr>
@@ -312,12 +333,6 @@ export default function PurchaseVoucherDetailPage() {
                         </Select>
                       </td>
                       <td className="p-1.5"><Input type="number" min="0" step="0.001" value={line.quantity} onChange={e => setLineField(line.id, 'quantity', e.target.value)} className="h-9" /></td>
-                      <td className="p-1.5">
-                        <Select value={line.godown_id} onValueChange={v => setLineField(line.id, 'godown_id', v)}>
-                          <SelectTrigger className="h-9"><SelectValue placeholder="Godown" /></SelectTrigger>
-                          <SelectContent>{godowns.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </td>
                       {showPricing && <td className="p-1.5"><Input type="number" min="0" step="0.01" value={line.rate} onChange={e => setLineField(line.id, 'rate', e.target.value)} className="h-9" /></td>}
                       <td className="p-1.5"><Button type="button" variant="ghost" size="sm" className="h-9 w-9 p-0 text-gray-400 hover:text-red-500" onClick={() => removeLine(line.id)}><Trash2 className="w-4 h-4" /></Button></td>
                     </tr>

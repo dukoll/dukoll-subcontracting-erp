@@ -6,6 +6,7 @@ import { formatDate, formatNumber } from '@/lib/utils';
 import type { UserRole, Item, Godown } from '@/types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { DateRangeFilter, daysAgoISO } from '@/components/shared/DateRangeFilter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,7 +41,7 @@ export default function StockLedgerPage() {
   const [loading, setLoading] = useState(false);
   const [filterItem, setFilterItem] = useState('');
   const [filterGodown, setFilterGodown] = useState('');
-  const [filterFrom, setFilterFrom] = useState('');
+  const [filterFrom, setFilterFrom] = useState(() => daysAgoISO(7));
   const [filterTo, setFilterTo] = useState(() => new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
@@ -85,11 +86,12 @@ export default function StockLedgerPage() {
   }
 
   function exportCsv() {
-    const headers = ['Date', 'Voucher Type', 'Voucher No', 'In Qty', 'Out Qty', 'Running Balance'];
+    const headers = ['Date', 'Voucher Type', 'Voucher No', 'Godown', 'In Qty', 'Out Qty', 'Running Balance'];
     const csvRows = [
       headers.join(','),
       ...rows.map(r => [
         r.date, r.voucher_type, r.voucher_no,
+        godowns.find(g => g.id === r.godown_id)?.name ?? '',
         r.in_qty, r.out_qty, r.running_balance ?? 0,
       ].join(','))
     ];
@@ -135,13 +137,8 @@ export default function StockLedgerPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-1.5">
-            <Label>From Date</Label>
-            <Input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} />
-          </div>
-          <div className="grid gap-1.5">
-            <Label>To Date</Label>
-            <Input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} />
+          <div className="col-span-2 md:col-span-2">
+            <DateRangeFilter from={filterFrom} to={filterTo} onChange={(f, t) => { setFilterFrom(f); setFilterTo(t); }} />
           </div>
         </div>
         <Button onClick={handleSearch} disabled={!filterItem || loading}>
@@ -171,10 +168,10 @@ export default function StockLedgerPage() {
                 <TableHead>Date</TableHead>
                 <TableHead>Voucher Type</TableHead>
                 <TableHead>Voucher No</TableHead>
+                <TableHead>Godown</TableHead>
                 <TableHead className="text-right">In Qty</TableHead>
                 <TableHead className="text-right">Out Qty</TableHead>
                 <TableHead className="text-right">Running Balance</TableHead>
-                <TableHead>UOM</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -187,12 +184,12 @@ export default function StockLedgerPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="font-mono text-xs">{row.voucher_no}</TableCell>
+                  <TableCell className="text-sm text-gray-600">{godowns.find(g => g.id === row.godown_id)?.name ?? '—'}</TableCell>
                   <TableCell className="text-right text-green-700">{row.in_qty > 0 ? formatNumber(row.in_qty) : '—'}</TableCell>
                   <TableCell className="text-right text-red-600">{row.out_qty > 0 ? formatNumber(row.out_qty) : '—'}</TableCell>
                   <TableCell className={`text-right font-semibold ${(row.running_balance ?? 0) < 0 ? 'text-red-600' : 'text-gray-900'}`}>
                     {formatNumber(row.running_balance ?? 0)}
                   </TableCell>
-                  <TableCell>{selectedItem?.uom?.abbreviation ?? ''}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

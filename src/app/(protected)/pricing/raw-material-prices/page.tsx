@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Plus, CheckCircle, Pencil } from 'lucide-react';
+import { Plus, CheckCircle, Pencil, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { canSeePricing } from '@/lib/permissions';
 import { formatDate, formatCurrency } from '@/lib/utils';
@@ -10,6 +10,7 @@ import type { UserRole, RawMaterialPrice, Item, Supplier, UOM } from '@/types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { AccessDenied } from '@/components/shared/AccessDenied';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,6 +49,7 @@ export default function RawMaterialPricesPage() {
   const [filterItem, setFilterItem] = useState('');
   const [filterFrom, setFilterFrom] = useState('');
   const [filterTo, setFilterTo] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<PriceRow | null>(null);
 
   useEffect(() => {
     async function init() {
@@ -152,6 +154,13 @@ export default function RawMaterialPricesPage() {
     loadData();
   }
 
+  async function handleDelete(price: PriceRow) {
+    const supabase = createClient();
+    const { error } = await supabase.from('raw_material_prices').delete().eq('id', price.id);
+    if (error) toast.error(error.message);
+    else { toast.success('Price entry deleted.'); loadData(); }
+  }
+
   async function handleApprove(price: PriceRow) {
     const supabase = createClient();
     const { error } = await supabase.from('raw_material_prices').update({ approved_by: userId }).eq('id', price.id);
@@ -229,6 +238,9 @@ export default function RawMaterialPricesPage() {
                       <Button size="sm" variant="ghost" onClick={() => openEdit(price)}>
                         <Pencil className="w-4 h-4" />
                       </Button>
+                      <Button size="sm" variant="ghost" className="text-gray-400 hover:text-red-500" onClick={() => setDeleteTarget(price)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -304,6 +316,15 @@ export default function RawMaterialPricesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={open => { if (!open) setDeleteTarget(null); }}
+        title="Delete Price Entry?"
+        description={`The price entry for "${deleteTarget?.item?.item_name ?? 'this item'}" will be permanently deleted. The raw material itself is not removed.`}
+        confirmLabel="Delete"
+        onConfirm={() => { if (deleteTarget) handleDelete(deleteTarget); setDeleteTarget(null); }}
+      />
     </div>
   );
 }

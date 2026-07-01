@@ -30,8 +30,6 @@ interface CalcResult {
   rows: CalcRow[];
   rmCost: number;
   pmCost: number;
-  labourCharge: number;
-  otherCharges: number;
   totalCost: number;
   outputQty: number;
   costPerUom: number;
@@ -42,8 +40,6 @@ export default function CostCalculatorPage() {
   const [boms, setBoms] = useState<BOMHeader[]>([]);
   const [selectedBom, setSelectedBom] = useState('');
   const [productionDate, setProductionDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [labourCharge, setLabourCharge] = useState('');
-  const [otherCharges, setOtherCharges] = useState('');
   const [result, setResult] = useState<CalcResult | null>(null);
   const [calculating, setCalculating] = useState(false);
 
@@ -101,12 +97,10 @@ export default function CostCalculatorPage() {
 
     const rmCost = rows.filter(r => r.item_type === 'raw_material').reduce((s, r) => s + r.cost, 0);
     const pmCost = rows.filter(r => r.item_type === 'packing_material').reduce((s, r) => s + r.cost, 0);
-    const labour = parseFloat(labourCharge) || 0;
-    const other = parseFloat(otherCharges) || 0;
-    const totalCost = rmCost + pmCost + labour + other;
+    const totalCost = rmCost + pmCost;
     const outputQty = bom.output_quantity || 1;
 
-    setResult({ rows, rmCost, pmCost, labourCharge: labour, otherCharges: other, totalCost, outputQty, costPerUom: totalCost / outputQty });
+    setResult({ rows, rmCost, pmCost, totalCost, outputQty, costPerUom: totalCost / outputQty });
     setCalculating(false);
   }
 
@@ -141,14 +135,6 @@ export default function CostCalculatorPage() {
             <div className="grid gap-1.5">
               <Label>Production Date *</Label>
               <Input type="date" value={productionDate} onChange={e => setProductionDate(e.target.value)} />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Labour / Service Charge (₹)</Label>
-              <Input type="number" step="0.01" value={labourCharge} onChange={e => setLabourCharge(e.target.value)} placeholder="0.00" />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Other Charges (₹)</Label>
-              <Input type="number" step="0.01" value={otherCharges} onChange={e => setOtherCharges(e.target.value)} placeholder="0.00" />
             </div>
             <Button onClick={calculate} disabled={!selectedBom || !productionDate || calculating} className="w-full">
               {calculating ? 'Calculating...' : 'Calculate Cost'}
@@ -210,20 +196,6 @@ export default function CostCalculatorPage() {
                     </div>
                   </>
                 )}
-
-                <Separator className="my-3" />
-
-                {/* Extra charges */}
-                <div className="space-y-1.5 text-sm mb-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Labour / Service Charge</span>
-                    <span>{formatCurrency(result.labourCharge)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Other Charges</span>
-                    <span>{formatCurrency(result.otherCharges)}</span>
-                  </div>
-                </div>
 
                 <Separator className="my-3" />
 

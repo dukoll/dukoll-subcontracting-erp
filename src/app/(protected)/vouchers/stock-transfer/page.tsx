@@ -6,11 +6,12 @@ import { Plus, ArrowRightLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { createClient } from '@/lib/supabase/client';
-import { formatDate, voucherStatusColor } from '@/lib/utils';
-import type { UserRole, StockTransferVoucher } from '@/types';
+import { formatDate, voucherStatusColor, voucherStatusLabel } from '@/lib/utils';
+import type { StockTransferVoucher } from '@/types';
 
 import { PageHeader } from '@/components/shared/PageHeader';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { VoucherFilters } from '@/components/shared/VoucherFilters';
 import { ExpandableVoucherTable, type ExpandItem, type VoucherColumn } from '@/components/shared/ExpandableVoucherTable';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,8 @@ export default function StockTransferPage() {
   const router = useRouter();
   const [vouchers, setVouchers] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
 
   useEffect(() => {
     async function init() {
@@ -45,12 +48,19 @@ export default function StockTransferPage() {
     init();
   }, []);
 
+  const q = search.trim().toLowerCase();
+  const filtered = vouchers.filter(v => {
+    if (status && v.status !== status) return false;
+    if (q && !(`${v.voucher_no} ${v.from_godown?.name ?? ''} ${v.to_godown?.name ?? ''}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
+
   const columns: VoucherColumn<Row>[] = [
     { header: 'Voucher No', render: v => <span className="font-mono text-sm font-medium">{v.voucher_no}</span> },
     { header: 'Date', render: v => formatDate(v.date) },
     { header: 'From Godown', render: v => v.from_godown?.name ?? '—' },
     { header: 'To Godown', render: v => <span className="flex items-center gap-1"><ArrowRightLeft className="w-3 h-3 text-gray-400" />{v.to_godown?.name ?? '—'}</span> },
-    { header: 'Status', render: v => <Badge className={voucherStatusColor(v.status)}>{v.status.charAt(0).toUpperCase() + v.status.slice(1)}</Badge> },
+    { header: 'Status', render: v => <Badge className={voucherStatusColor(v.status)}>{voucherStatusLabel(v.status)}</Badge> },
   ];
 
   return (
@@ -72,7 +82,14 @@ export default function StockTransferPage() {
           action={<Button onClick={() => router.push('/vouchers/stock-transfer/new')}><Plus className="w-4 h-4 mr-2" />New Stock Transfer</Button>}
         />
       ) : (
-        <ExpandableVoucherTable columns={columns} rows={vouchers} onRowClick={id => router.push(`/vouchers/stock-transfer/${id}`)} />
+        <>
+          <VoucherFilters search={search} onSearch={setSearch} status={status} onStatus={setStatus} searchPlaceholder="Search voucher no or godown…" />
+          {filtered.length === 0 ? (
+            <EmptyState icon={ArrowRightLeft} title="No matching vouchers" description="Try adjusting the search or status filter." />
+          ) : (
+            <ExpandableVoucherTable columns={columns} rows={filtered} onRowClick={id => router.push(`/vouchers/stock-transfer/${id}`)} />
+          )}
+        </>
       )}
     </div>
   );

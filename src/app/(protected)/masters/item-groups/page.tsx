@@ -48,8 +48,14 @@ export default function ItemGroupsPage() {
   const [editing, setEditing] = useState<ItemGroup | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ItemGroup | null>(null);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
   const role = useRole();
   const isAdmin = role === 'admin';
+
+  const q = search.trim().toLowerCase();
+  const filteredGroups = groups.filter(g =>
+    !q || `${g.name} ${g.description ?? ''}`.toLowerCase().includes(q)
+  );
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -127,6 +133,11 @@ export default function ItemGroupsPage() {
       ) : groups.length === 0 ? (
         <EmptyState icon={Tags} title="No item groups" description="Create your first item group." action={isAdmin ? <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4 mr-1" />Add Group</Button> : undefined} />
       ) : (
+        <>
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <Input className="w-full sm:w-72" placeholder="Search name or description…" value={search} onChange={e => setSearch(e.target.value)} />
+          {search && <Button variant="ghost" size="sm" onClick={() => setSearch('')}>Clear</Button>}
+        </div>
         <div className="rounded-lg border bg-white overflow-hidden">
           <Table>
             <TableHeader>
@@ -138,7 +149,10 @@ export default function ItemGroupsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {groups.map(g => (
+              {filteredGroups.length === 0 && (
+                <TableRow><TableCell colSpan={isAdmin ? 4 : 3} className="text-center text-gray-400 py-8">No item groups match your search.</TableCell></TableRow>
+              )}
+              {filteredGroups.map(g => (
                 <TableRow key={g.id}>
                   <TableCell className="font-medium">{g.name}</TableCell>
                   <TableCell className="text-gray-500 text-sm">{g.description ?? '—'}</TableCell>
@@ -156,6 +170,7 @@ export default function ItemGroupsPage() {
             </TableBody>
           </Table>
         </div>
+        </>
       )}
 
       {/* Add / Edit Dialog */}

@@ -297,31 +297,31 @@ WITH mv AS (
   -- Purchase → in
   SELECT pvi.item_id, pvi.godown_id, pvi.quantity AS in_qty, 0 AS out_qty, pv.date
   FROM   purchase_voucher_items pvi JOIN purchase_vouchers pv ON pv.id = pvi.voucher_id
-  WHERE  pv.status != 'cancelled'
+  WHERE  pv.status = 'approved'
   UNION ALL
   -- Transfer out
   SELECT sti.item_id, stv.from_godown_id, 0, sti.quantity, stv.date
   FROM   stock_transfer_items sti JOIN stock_transfer_vouchers stv ON stv.id = sti.voucher_id
-  WHERE  stv.status != 'cancelled'
+  WHERE  stv.status = 'approved'
   UNION ALL
   -- Transfer in
   SELECT sti.item_id, stv.to_godown_id, sti.quantity, 0, stv.date
   FROM   stock_transfer_items sti JOIN stock_transfer_vouchers stv ON stv.id = sti.voucher_id
-  WHERE  stv.status != 'cancelled'
+  WHERE  stv.status = 'approved'
   UNION ALL
   -- Production consumed → out
   SELECT pvi.item_id, pvi.godown_id, 0, pvi.quantity, pv.date
   FROM   production_voucher_items pvi JOIN production_vouchers pv ON pv.id = pvi.voucher_id
-  WHERE  pv.status != 'cancelled' AND pvi.movement_type = 'consumed'
+  WHERE  pv.status = 'approved' AND pvi.movement_type = 'consumed'
   UNION ALL
   -- Production finished → in
   SELECT pv.finished_item_id, pv.finished_goods_godown_id, pv.production_quantity, 0, pv.date
-  FROM   production_vouchers pv WHERE pv.status != 'cancelled'
+  FROM   production_vouchers pv WHERE pv.status = 'approved'
   UNION ALL
   -- Sales → out
   SELECT svi.item_id, svi.godown_id, 0, svi.quantity, sv.date
   FROM   sales_voucher_items svi JOIN sales_vouchers sv ON sv.id = svi.voucher_id
-  WHERE  sv.status != 'cancelled'
+  WHERE  sv.status = 'approved'
 )
 SELECT
   mv.item_id,
@@ -348,27 +348,27 @@ CREATE OR REPLACE VIEW v_stock_ledger AS
   SELECT pv.date, 'Purchase'::text AS voucher_type, pv.voucher_no, pvi.item_id, pvi.godown_id,
          pvi.quantity AS in_qty, 0::NUMERIC AS out_qty
   FROM   purchase_voucher_items pvi JOIN purchase_vouchers pv ON pv.id = pvi.voucher_id
-  WHERE  pv.status != 'cancelled'
+  WHERE  pv.status = 'approved'
 UNION ALL
   SELECT stv.date,'Stock Transfer (Out)', stv.voucher_no, sti.item_id, stv.from_godown_id, 0, sti.quantity
   FROM   stock_transfer_items sti JOIN stock_transfer_vouchers stv ON stv.id = sti.voucher_id
-  WHERE  stv.status != 'cancelled'
+  WHERE  stv.status = 'approved'
 UNION ALL
   SELECT stv.date,'Stock Transfer (In)', stv.voucher_no, sti.item_id, stv.to_godown_id, sti.quantity, 0
   FROM   stock_transfer_items sti JOIN stock_transfer_vouchers stv ON stv.id = sti.voucher_id
-  WHERE  stv.status != 'cancelled'
+  WHERE  stv.status = 'approved'
 UNION ALL
   SELECT pv.date,'Production (Consumed)', pv.voucher_no, pvi.item_id, pvi.godown_id, 0, pvi.quantity
   FROM   production_voucher_items pvi JOIN production_vouchers pv ON pv.id = pvi.voucher_id
-  WHERE  pv.status != 'cancelled' AND pvi.movement_type = 'consumed'
+  WHERE  pv.status = 'approved' AND pvi.movement_type = 'consumed'
 UNION ALL
   SELECT pv.date,'Production (Finished)', pv.voucher_no, pv.finished_item_id, pv.finished_goods_godown_id,
          pv.production_quantity, 0
-  FROM   production_vouchers pv WHERE pv.status != 'cancelled'
+  FROM   production_vouchers pv WHERE pv.status = 'approved'
 UNION ALL
   SELECT sv.date,'Sales/Dispatch', sv.voucher_no, svi.item_id, svi.godown_id, 0, svi.quantity
   FROM   sales_voucher_items svi JOIN sales_vouchers sv ON sv.id = svi.voucher_id
-  WHERE  sv.status != 'cancelled';
+  WHERE  sv.status = 'approved';
 
 -- ── Triggers ──────────────────────────────────────────────────
 -- SECURITY DEFINER + SET search_path is required: the trigger fires as the

@@ -55,8 +55,18 @@ export default function SuppliersPage() {
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Supplier | null>(null);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const role = useRole();
   const isAdmin = role === 'admin';
+
+  const q = search.trim().toLowerCase();
+  const filteredSuppliers = suppliers.filter(s => {
+    if (typeFilter === 'subcontractor' && !s.is_subcontractor) return false;
+    if (typeFilter === 'supplier' && s.is_subcontractor) return false;
+    if (q && !(`${s.name} ${s.phone ?? ''} ${s.email ?? ''} ${s.gst_no ?? ''}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -155,6 +165,19 @@ export default function SuppliersPage() {
       ) : suppliers.length === 0 ? (
         <EmptyState icon={Truck} title="No suppliers" description="Add your first supplier." action={isAdmin ? <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4 mr-1" />Add Supplier</Button> : undefined} />
       ) : (
+        <>
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <Input className="w-full sm:w-72" placeholder="Search name, phone, email or GST…" value={search} onChange={e => setSearch(e.target.value)} />
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-44"><SelectValue placeholder="All types" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All types</SelectItem>
+              <SelectItem value="supplier">Supplier</SelectItem>
+              <SelectItem value="subcontractor">Subcontractor</SelectItem>
+            </SelectContent>
+          </Select>
+          {(search || typeFilter) && <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setTypeFilter(''); }}>Clear</Button>}
+        </div>
         <div className="rounded-lg border bg-white overflow-hidden">
           <Table>
             <TableHeader>
@@ -169,7 +192,10 @@ export default function SuppliersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {suppliers.map(s => (
+              {filteredSuppliers.length === 0 && (
+                <TableRow><TableCell colSpan={isAdmin ? 7 : 6} className="text-center text-gray-400 py-8">No suppliers match your filters.</TableCell></TableRow>
+              )}
+              {filteredSuppliers.map(s => (
                 <TableRow key={s.id}>
                   <TableCell className="font-medium">{s.name}</TableCell>
                   <TableCell className="text-gray-500 text-sm">{s.phone ?? '—'}</TableCell>
@@ -194,6 +220,7 @@ export default function SuppliersPage() {
             </TableBody>
           </Table>
         </div>
+        </>
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

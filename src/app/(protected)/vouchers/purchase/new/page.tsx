@@ -26,12 +26,11 @@ interface LineItem {
   quantity: string;
   uom_id: string;
   uom_name: string;
-  godown_id: string;
   rate: string;
 }
 
 function newLine(): LineItem {
-  return { id: crypto.randomUUID(), item_id: '', quantity: '', uom_id: '', uom_name: '', godown_id: '', rate: '' };
+  return { id: crypto.randomUUID(), item_id: '', quantity: '', uom_id: '', uom_name: '', rate: '' };
 }
 
 export default function NewPurchaseVoucherPage() {
@@ -47,6 +46,7 @@ export default function NewPurchaseVoucherPage() {
   const [supplierId, setSupplierId] = useState('');
   const [supplierInvNo, setSupplierInvNo] = useState('');
   const [supplierInvDate, setSupplierInvDate] = useState('');
+  const [godownId, setGodownId] = useState('');
   const [remarks, setRemarks] = useState('');
   const [lines, setLines] = useState<LineItem[]>([newLine()]);
 
@@ -103,6 +103,7 @@ export default function NewPurchaseVoucherPage() {
     e.preventDefault();
     if (!supplierInvNo.trim()) { toast.error('Please enter the supplier invoice number'); return; }
     if (!supplierId) { toast.error('Please select a supplier'); return; }
+    if (!godownId) { toast.error('Please select a godown'); return; }
     const validLines = lines.filter(l => l.item_id && parseFloat(l.quantity) > 0);
     if (validLines.length === 0) { toast.error('Add at least one line item with quantity'); return; }
 
@@ -131,7 +132,7 @@ export default function NewPurchaseVoucherPage() {
         item_id: l.item_id,
         quantity: parseFloat(l.quantity),
         uom_id: l.uom_id || null,
-        godown_id: l.godown_id || null,
+        godown_id: godownId || null,
         rate: showPricing && l.rate ? parseFloat(l.rate) : null,
         amount: showPricing ? calcAmount(l) : null,
         seq_no: idx + 1,
@@ -192,6 +193,19 @@ export default function NewPurchaseVoucherPage() {
               <Label htmlFor="invDate">Supplier Invoice Date</Label>
               <Input id="invDate" type="date" value={supplierInvDate} onChange={e => setSupplierInvDate(e.target.value)} />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="godown">Godown *</Label>
+              <Select value={godownId} onValueChange={setGodownId}>
+                <SelectTrigger id="godown">
+                  <SelectValue placeholder="Select godown..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {godowns.map(g => (
+                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
@@ -211,7 +225,6 @@ export default function NewPurchaseVoucherPage() {
                   <th className="text-left p-2 font-medium text-gray-600 min-w-[200px]">Item *</th>
                   <th className="text-left p-2 font-medium text-gray-600 w-28">Quantity *</th>
                   <th className="text-left p-2 font-medium text-gray-600 w-24">UOM</th>
-                  <th className="text-left p-2 font-medium text-gray-600 min-w-[160px]">Godown</th>
                   {showPricing && <th className="text-left p-2 font-medium text-gray-600 w-28">Rate</th>}
                   {showPricing && <th className="text-right p-2 font-medium text-gray-600 w-28">Amount</th>}
                   <th className="w-10" />
@@ -248,18 +261,6 @@ export default function NewPurchaseVoucherPage() {
                         className="h-9"
                         placeholder="UOM"
                       />
-                    </td>
-                    <td className="p-1.5">
-                      <Select value={line.godown_id} onValueChange={v => handleLineField(line.id, 'godown_id', v)}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="Select godown..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {godowns.map(g => (
-                            <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                     </td>
                     {showPricing && (
                       <td className="p-1.5">

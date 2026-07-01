@@ -50,8 +50,14 @@ export default function CustomersPage() {
   const [editing, setEditing] = useState<Customer | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
   const role = useRole();
   const isAdmin = role === 'admin';
+
+  const q = search.trim().toLowerCase();
+  const filteredCustomers = customers.filter(c =>
+    !q || `${c.name} ${c.city ?? ''} ${c.phone ?? ''} ${c.gst_no ?? ''}`.toLowerCase().includes(q)
+  );
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -141,6 +147,11 @@ export default function CustomersPage() {
       ) : customers.length === 0 ? (
         <EmptyState icon={Users} title="No customers" description="Add your first customer." action={isAdmin ? <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4 mr-1" />Add Customer</Button> : undefined} />
       ) : (
+        <>
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <Input className="w-full sm:w-72" placeholder="Search name, city, phone or GST…" value={search} onChange={e => setSearch(e.target.value)} />
+          {search && <Button variant="ghost" size="sm" onClick={() => setSearch('')}>Clear</Button>}
+        </div>
         <div className="rounded-lg border bg-white overflow-hidden">
           <Table>
             <TableHeader>
@@ -154,7 +165,10 @@ export default function CustomersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {customers.map(c => (
+              {filteredCustomers.length === 0 && (
+                <TableRow><TableCell colSpan={isAdmin ? 6 : 5} className="text-center text-gray-400 py-8">No customers match your search.</TableCell></TableRow>
+              )}
+              {filteredCustomers.map(c => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">{c.name}</TableCell>
                   <TableCell className="text-gray-500 text-sm">{c.city ?? '—'}</TableCell>
@@ -174,6 +188,7 @@ export default function CustomersPage() {
             </TableBody>
           </Table>
         </div>
+        </>
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

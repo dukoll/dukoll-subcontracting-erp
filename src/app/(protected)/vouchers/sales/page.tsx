@@ -7,11 +7,12 @@ import { toast } from 'sonner';
 
 import { createClient } from '@/lib/supabase/client';
 import { canSeePricing } from '@/lib/permissions';
-import { formatDate, formatCurrency, voucherStatusColor } from '@/lib/utils';
+import { formatDate, formatCurrency, voucherStatusColor, voucherStatusLabel } from '@/lib/utils';
 import type { UserRole, SalesVoucher } from '@/types';
 
 import { PageHeader } from '@/components/shared/PageHeader';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { VoucherFilters } from '@/components/shared/VoucherFilters';
 import { ExpandableVoucherTable, type ExpandItem, type VoucherColumn } from '@/components/shared/ExpandableVoucherTable';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +25,8 @@ export default function SalesVouchersPage() {
   const [role, setRole] = useState<UserRole>('store');
   const [vouchers, setVouchers] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
 
   useEffect(() => {
     async function init() {
@@ -54,13 +57,20 @@ export default function SalesVouchersPage() {
 
   const showPricing = canSeePricing(role);
 
+  const q = search.trim().toLowerCase();
+  const filtered = vouchers.filter(v => {
+    if (status && v.status !== status) return false;
+    if (q && !(`${v.voucher_no} ${v.customer?.name ?? ''} ${v.customer?.city ?? ''}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
+
   const columns: VoucherColumn<Row>[] = [
     { header: 'Sales Order No', render: v => <span className="font-mono text-sm font-medium">{v.voucher_no}</span> },
     { header: 'Date', render: v => formatDate(v.date) },
     { header: 'Customer', render: v => v.customer?.name ?? '—' },
     { header: 'City', render: v => v.customer?.city ?? '—' },
     ...(showPricing ? [{ header: 'Total Amount', className: 'text-right', render: (v: Row) => <span className="font-medium">{formatCurrency(v.total_amount)}</span> }] : []),
-    { header: 'Status', render: v => <Badge className={voucherStatusColor(v.status)}>{v.status.charAt(0).toUpperCase() + v.status.slice(1)}</Badge> },
+    { header: 'Status', render: v => <Badge className={voucherStatusColor(v.status)}>{voucherStatusLabel(v.status)}</Badge> },
   ];
 
   return (
@@ -82,7 +92,14 @@ export default function SalesVouchersPage() {
           action={<Button onClick={() => router.push('/vouchers/sales/new')}><Plus className="w-4 h-4 mr-2" />New Sales Voucher</Button>}
         />
       ) : (
-        <ExpandableVoucherTable columns={columns} rows={vouchers} onRowClick={id => router.push(`/vouchers/sales/${id}`)} />
+        <>
+          <VoucherFilters search={search} onSearch={setSearch} status={status} onStatus={setStatus} searchPlaceholder="Search order no, customer or city…" />
+          {filtered.length === 0 ? (
+            <EmptyState icon={Truck} title="No matching vouchers" description="Try adjusting the search or status filter." />
+          ) : (
+            <ExpandableVoucherTable columns={columns} rows={filtered} onRowClick={id => router.push(`/vouchers/sales/${id}`)} />
+          )}
+        </>
       )}
     </div>
   );

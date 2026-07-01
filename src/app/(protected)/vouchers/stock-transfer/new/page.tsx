@@ -33,6 +33,7 @@ export default function NewStockTransferPage() {
   const router = useRouter();
   const [items, setItems] = useState<Item[]>([]);
   const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [previewNo, setPreviewNo] = useState('ST-001');
   const [saving, setSaving] = useState(false);
 
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -58,6 +59,18 @@ export default function NewStockTransferPage() {
       ]);
       setItems((itm ?? []) as Item[]);
       setGodowns((gdwn ?? []) as Godown[]);
+
+      // #3 — preview the next sequential voucher no (DB trigger assigns the
+      // authoritative value on insert; this is a best-effort display).
+      const { data: last } = await supabase
+        .from('stock_transfer_vouchers')
+        .select('voucher_no')
+        .ilike('voucher_no', 'ST-%')
+        .order('voucher_no', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const nextN = last?.voucher_no ? (parseInt(last.voucher_no.split('-')[1], 10) || 0) + 1 : 1;
+      setPreviewNo(`ST-${String(nextN).padStart(3, '0')}`);
     }
     init();
   }, []);
@@ -150,7 +163,7 @@ export default function NewStockTransferPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label>Voucher No</Label>
-              <Input value="Auto-generated on save (ST-001…)" readOnly className="bg-gray-50 text-gray-400 text-sm" />
+              <Input value={previewNo} readOnly className="bg-gray-50 font-mono font-medium" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="date">Date *</Label>

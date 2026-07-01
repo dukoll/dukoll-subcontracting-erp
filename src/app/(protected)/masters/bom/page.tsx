@@ -12,7 +12,9 @@ import { formatDate, formatNumber } from '@/lib/utils';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 
 function useRole() {
@@ -32,8 +34,18 @@ export default function BOMListPage() {
   const router = useRouter();
   const [boms, setBoms] = useState<BOMHeader[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const role = useRole();
   const isAdmin = role === 'admin';
+
+  const q = search.trim().toLowerCase();
+  const filteredBoms = boms.filter(b => {
+    if (statusFilter === 'active' && !b.is_active) return false;
+    if (statusFilter === 'inactive' && b.is_active) return false;
+    if (q && !(`${b.bom_code} ${b.finished_item?.item_name ?? ''}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
 
   const fetchBoms = useCallback(async () => {
     setLoading(true);
@@ -84,6 +96,19 @@ export default function BOMListPage() {
           }
         />
       ) : (
+        <>
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <Input className="w-full sm:w-72" placeholder="Search BOM code or finished item…" value={search} onChange={e => setSearch(e.target.value)} />
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-44"><SelectValue placeholder="All statuses" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+          {(search || statusFilter) && <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setStatusFilter(''); }}>Clear</Button>}
+        </div>
         <div className="rounded-lg border bg-white overflow-hidden">
           <Table>
             <TableHeader>
@@ -98,7 +123,10 @@ export default function BOMListPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {boms.map(bom => (
+              {filteredBoms.length === 0 && (
+                <TableRow><TableCell colSpan={7} className="text-center text-gray-400 py-8">No BOMs match your filters.</TableCell></TableRow>
+              )}
+              {filteredBoms.map(bom => (
                 <TableRow
                   key={bom.id}
                   className="cursor-pointer hover:bg-gray-50"
@@ -135,6 +163,7 @@ export default function BOMListPage() {
             </TableBody>
           </Table>
         </div>
+        </>
       )}
     </div>
   );
