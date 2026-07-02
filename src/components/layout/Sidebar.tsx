@@ -52,7 +52,7 @@ export function Sidebar({ role, onClose, collapsed = false, onToggleCollapse }: 
       >
         {!collapsed && (
           <Link href="/dashboard" className="flex items-center" onClick={onClose}>
-            <DukollLogo className="h-7 w-auto text-white" />
+            <DukollLogo className="h-8 w-auto text-white" />
           </Link>
         )}
         {onToggleCollapse && (
