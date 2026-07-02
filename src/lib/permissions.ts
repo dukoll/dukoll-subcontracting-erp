@@ -149,6 +149,7 @@ export const SIDEBAR_NAV = (role: UserRole) => {
         { label: 'Users',       href: '/admin/users' },
         { label: 'Permissions', href: '/admin/permissions' },
         { label: 'Audit Logs',  href: '/admin/audit-logs' },
+        { label: 'Backup',      href: '/admin/backup' },
       ],
     },
   ].filter(item => item.always);

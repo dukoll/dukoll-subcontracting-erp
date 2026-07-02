@@ -6,7 +6,6 @@ import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { createClient } from '@/lib/supabase/client';
-import { getStockShortfalls, stockErrorMessage } from '@/lib/stock';
 import type { Item, Godown } from '@/types';
 
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -106,13 +105,8 @@ export default function NewStockTransferPage() {
     if (validLines.length === 0) { toast.error('Add at least one line item with quantity'); return; }
 
     setSaving(true);
-    // Prevent negative stock: the source godown must have enough on hand.
-    const shortfalls = await getStockShortfalls(validLines.map(l => ({
-      item_id: l.item_id, godown_id: fromGodownId, qty: parseFloat(l.quantity),
-      item_name: items.find(i => i.id === l.item_id)?.item_name,
-    })));
-    if (shortfalls.length) { toast.error(stockErrorMessage(shortfalls)); setSaving(false); return; }
-
+    // Note: stock availability is checked on SUBMIT, not on draft save —
+    // saving a draft does not move stock.
     const supabase = createClient();
     try {
       // voucher_no is auto-assigned by the DB trigger (ST-001, ST-002, …)
