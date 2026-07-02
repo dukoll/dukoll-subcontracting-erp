@@ -30,6 +30,7 @@ jobs:
           STAMP=$(date -u +'%Y-%m-%d')
           pg_dump "$DB_URL" --no-owner --no-privileges -Fc -f "dukoll-backup-$STAMP.dump"
           ls -lh "dukoll-backup-$STAMP.dump"
+          psql "$DB_URL" -c "insert into backup_log(type, note) values ('auto', 'Daily automated pg_dump');" || echo "backup_log insert skipped"
 
       - name: Upload backup artifact
         uses: actions/upload-artifact@v4
