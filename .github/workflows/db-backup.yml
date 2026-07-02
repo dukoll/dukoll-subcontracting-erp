@@ -25,6 +25,8 @@ jobs:
             echo "::error::SUPABASE_DB_URL secret is not set. Add it in repo Settings -> Secrets and variables -> Actions."
             exit 1
           fi
+          export PATH="/usr/lib/postgresql/17/bin:$PATH"
+          pg_dump --version
           STAMP=$(date -u +'%Y-%m-%d')
           pg_dump "$DB_URL" --no-owner --no-privileges -Fc -f "dukoll-backup-$STAMP.dump"
           ls -lh "dukoll-backup-$STAMP.dump"
