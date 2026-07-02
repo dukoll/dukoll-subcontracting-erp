@@ -43,7 +43,9 @@ export default function LoginPage() {
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {/* Logo / Brand */}
           <div className="flex flex-col items-center mb-8">
-            <DukollLogo className="h-11 w-auto text-gray-900 mb-3" />
+            <div className="bg-gray-900 rounded-xl px-6 py-4 mb-3 flex items-center justify-center">
+              <DukollLogo className="h-9 w-auto text-white" />
+            </div>
             <p className="text-sm text-gray-500 mt-1">Sub-contracting Management System</p>
           </div>
 

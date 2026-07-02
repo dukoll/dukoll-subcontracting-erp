@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 
 import { createClient } from '@/lib/supabase/client';
 import { formatDate, formatNumber, voucherStatusColor, voucherStatusLabel } from '@/lib/utils';
+import { getStockShortfalls, stockErrorMessage } from '@/lib/stock';
 import { openPrintWindow, esc } from '@/lib/print';
 import type { UserRole, Item, Godown, StockTransferVoucher, StockTransferItem } from '@/types';
 
@@ -117,7 +118,13 @@ export default function StockTransferDetailPage() {
   }
 
   async function handleSubmitVoucher() {
+    if (!voucher) return;
     setSaving(true);
+    // Block submit if the source godown doesn't have enough stock (no negatives).
+    const shortfalls = await getStockShortfalls(
+      items.map(it => ({ item_id: it.item_id, godown_id: voucher.from_godown_id, qty: Number(it.quantity), item_name: it.item?.item_name }))
+    );
+    if (shortfalls.length) { toast.error(stockErrorMessage(shortfalls)); setSaving(false); return; }
     const supabase = createClient();
     const { error } = await supabase.from('stock_transfer_vouchers').update({ status: 'approved' }).eq('id', id);
     setSaving(false);

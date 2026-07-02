@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { canSeePricing } from '@/lib/permissions';
 import { formatDate, formatNumber, formatCurrency, voucherStatusColor, voucherStatusLabel } from '@/lib/utils';
+import { getStockShortfalls, stockErrorMessage } from '@/lib/stock';
 import { openPrintWindow, esc } from '@/lib/print';
 import type { UserRole, Supplier, Godown, BOMHeader, ProductionVoucher, ProductionVoucherItem } from '@/types';
 
@@ -152,7 +153,18 @@ export default function ProductionVoucherDetailPage() {
   }
 
   async function handleSubmitVoucher() {
+    if (!voucher) return;
     setSaving(true);
+    // Block submit if the source godown lacks enough raw material (no negatives).
+    const shortfalls = await getStockShortfalls(
+      items.filter(i => i.movement_type === 'consumed').map(i => ({
+        item_id: i.item_id,
+        godown_id: i.godown_id ?? voucher.source_godown_id ?? '',
+        qty: Number(i.quantity),
+        item_name: i.item?.item_name,
+      }))
+    );
+    if (shortfalls.length) { toast.error(stockErrorMessage(shortfalls)); setSaving(false); return; }
     const supabase = createClient();
     const { error } = await supabase.from('production_vouchers').update({ status: 'approved' }).eq('id', id);
     setSaving(false);

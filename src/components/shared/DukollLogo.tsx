@@ -1,7 +1,10 @@
+'use client';
+
+import { useState } from 'react';
+
 interface DukollLogoProps {
   className?: string;
-  /** Colour of the "KOLL" part. Defaults to currentColor so it adapts to the
-   *  surrounding text colour (white in the dark sidebar, dark on light pages). */
+  /** Colour of the "KOLL" part in the SVG fallback. Defaults to currentColor. */
   wordColor?: string;
 }
 
@@ -9,11 +12,27 @@ interface DukollLogoProps {
 const DUKOLL_RED = '#E4002B';
 
 /**
- * DUKOLL wordmark: red "DU" (with the signature dot inside the D) + "KOLL".
- * Scalable SVG so it stays crisp at any size. Set the height via `className`
- * (e.g. "h-7 w-auto"); the width follows the viewBox aspect ratio.
+ * DUKOLL logo. Renders the uploaded image at /dukoll-logo.png (place a PNG/SVG
+ * there in the public/ folder). If that file is missing, it automatically falls
+ * back to a built-in SVG wordmark so the UI never shows a broken image.
+ * Set the height via `className` (e.g. "h-7 w-auto").
  */
 export function DukollLogo({ className, wordColor = 'currentColor' }: DukollLogoProps) {
+  const [imgFailed, setImgFailed] = useState(false);
+
+  if (!imgFailed) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return (
+      <img
+        src="/dukoll-logo.png"
+        alt="DUKOLL"
+        className={className}
+        onError={() => setImgFailed(true)}
+      />
+    );
+  }
+
+  // Fallback wordmark
   return (
     <svg
       viewBox="0 0 232 48"
@@ -34,7 +53,6 @@ export function DukollLogo({ className, wordColor = 'currentColor' }: DukollLogo
         <tspan fill={DUKOLL_RED}>DU</tspan>
         <tspan fill={wordColor}>KOLL</tspan>
       </text>
-      {/* Signature dot inside the "D" opening */}
       <circle cx="17" cy="26" r="5.5" fill={DUKOLL_RED} />
     </svg>
   );

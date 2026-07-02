@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 
 import { createClient } from '@/lib/supabase/client';
 import { canSeePricing } from '@/lib/permissions';
+import { getStockShortfalls, stockErrorMessage } from '@/lib/stock';
 import { formatNumber } from '@/lib/utils';
 import type { UserRole, Customer, Item, Godown } from '@/types';
 
@@ -121,6 +122,13 @@ export default function NewSalesVoucherPage() {
     if (validLines.length === 0) { toast.error('Add at least one line item with quantity'); return; }
 
     setSaving(true);
+    // Prevent negative stock: the dispatch godown must have enough on hand.
+    const shortfalls = await getStockShortfalls(validLines.map(l => ({
+      item_id: l.item_id, godown_id: godownId, qty: parseFloat(l.quantity),
+      item_name: items.find(i => i.id === l.item_id)?.item_name,
+    })));
+    if (shortfalls.length) { toast.error(stockErrorMessage(shortfalls)); setSaving(false); return; }
+
     const supabase = createClient();
     try {
       const { data: voucher, error: vErr } = await supabase

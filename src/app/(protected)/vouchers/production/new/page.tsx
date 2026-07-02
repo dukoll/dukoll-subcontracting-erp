@@ -6,6 +6,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { createClient } from '@/lib/supabase/client';
+import { getStockShortfalls, stockErrorMessage } from '@/lib/stock';
 import { formatNumber } from '@/lib/utils';
 import type { Supplier, Godown, BOMHeader, Item } from '@/types';
 
@@ -204,6 +205,13 @@ export default function NewProductionVoucherPage() {
     if (validRaw.length === 0) { toast.error('Add at least one raw material with quantity'); return; }
 
     setSaving(true);
+    // Prevent negative stock: the source godown must hold enough raw material.
+    const shortfalls = await getStockShortfalls(validRaw.map(r => ({
+      item_id: r.item_id, godown_id: sourceGodownId, qty: r.required_qty,
+      item_name: items.find(i => i.id === r.item_id)?.item_name,
+    })));
+    if (shortfalls.length) { toast.error(stockErrorMessage(shortfalls)); setSaving(false); return; }
+
     const supabase = createClient();
     try {
       const bom = selectedBOM!;
