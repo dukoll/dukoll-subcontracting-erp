@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { Item, Godown } from '@/types';
 
 import { PageHeader } from '@/components/shared/PageHeader';
+import { SearchableSelect } from '@/components/shared/SearchableSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -224,16 +225,8 @@ export default function NewStockTransferPage() {
                 {lines.map((line) => (
                   <tr key={line.id}>
                     <td className="p-1.5">
-                      <Select value={line.item_id} onValueChange={v => handleItemChange(line.id, v)}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="Select item..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {items.map(i => (
-                            <SelectItem key={i.id} value={i.id}>{i.item_name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect value={line.item_id} onValueChange={v => handleItemChange(line.id, v)}
+                        className="h-9" placeholder="Select item..." options={items.map(i => ({ value: i.id, label: i.item_name }))} />
                     </td>
                     <td className="p-1.5">
                       <Input

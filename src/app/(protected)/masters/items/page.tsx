@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Pencil, Trash2, Loader2, Package, Search, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Package, Search, X, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { createClient } from '@/lib/supabase/client';
@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 
-const ITEM_TYPES = ['raw_material', 'packing_material', 'finished_goods', 'service'] as const;
+const ITEM_TYPES = ['raw_material', 'packing_material', 'semi_finished_goods', 'finished_goods', 'service'] as const;
 
 const schema = z.object({
   item_name: z.string().min(1, 'Item name is required').max(200),
@@ -52,6 +52,7 @@ function useRole() {
 const ITEM_TYPE_COLOR: Record<string, string> = {
   raw_material: 'bg-red-100 text-red-800',
   packing_material: 'bg-purple-100 text-purple-800',
+  semi_finished_goods: 'bg-amber-100 text-amber-800',
   finished_goods: 'bg-green-100 text-green-800',
   service: 'bg-orange-100 text-orange-800',
 };
@@ -122,6 +123,20 @@ export default function ItemsPage() {
     setEditing(item);
     reset({
       item_name: item.item_name,
+      item_group_id: item.item_group_id ?? null,
+      uom_id: item.uom_id ?? null,
+      item_type: item.item_type,
+      weight_kg: item.weight_kg ?? null,
+      description: item.description ?? '',
+      is_active: item.is_active,
+    });
+    setDialogOpen(true);
+  }
+
+  function openDuplicate(item: Item) {
+    setEditing(null); // creates a NEW item on save
+    reset({
+      item_name: `${item.item_name} (Copy)`,
       item_group_id: item.item_group_id ?? null,
       uom_id: item.uom_id ?? null,
       item_type: item.item_type,
@@ -250,8 +265,9 @@ export default function ItemsPage() {
                   {isAdmin && (
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => openEdit(item)}><Pencil className="w-4 h-4" /></Button>
-                        <Button size="icon" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setDeleteTarget(item)}><Trash2 className="w-4 h-4" /></Button>
+                        <Button size="icon" variant="ghost" title="Duplicate" onClick={() => openDuplicate(item)}><Copy className="w-4 h-4" /></Button>
+                        <Button size="icon" variant="ghost" title="Edit" onClick={() => openEdit(item)}><Pencil className="w-4 h-4" /></Button>
+                        <Button size="icon" variant="ghost" className="text-red-500 hover:text-red-600" title="Delete" onClick={() => setDeleteTarget(item)}><Trash2 className="w-4 h-4" /></Button>
                       </div>
                     </TableCell>
                   )}

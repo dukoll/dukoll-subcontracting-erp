@@ -87,7 +87,7 @@ export default function StockTransferPage() {
           {filtered.length === 0 ? (
             <EmptyState icon={ArrowRightLeft} title="No matching vouchers" description="Try adjusting the search or status filter." />
           ) : (
-            <ExpandableVoucherTable columns={columns} rows={filtered} onRowClick={id => router.push(`/vouchers/stock-transfer/${id}`)} />
+            <ExpandableVoucherTable columns={columns} rows={filtered} storageKey="stock-transfer-vouchers" onRowClick={id => router.push(`/vouchers/stock-transfer/${id}`)} />
           )}
         </>
       )}

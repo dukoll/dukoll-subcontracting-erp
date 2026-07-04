@@ -78,12 +78,16 @@ export default function ProductionVoucherDetailPage() {
     if (error || !v) { toast.error('Production voucher not found'); router.push('/vouchers/production'); return; }
     const vData = v as ProductionVoucher;
 
-    const [{ data: vi }, { data: subs }, { data: gdwn }, { data: bomData }] = await Promise.all([
+    const [{ data: vi }, { data: subs }, { data: gdwn }, bomRes] = await Promise.all([
       supabase.from('production_voucher_items').select('*, item:items(id,item_name), uom:uoms(id,abbreviation)').eq('voucher_id', id).order('seq_no', { ascending: true, nullsFirst: false }),
       supabase.from('suppliers').select('id,name,default_godown_id').eq('is_active', true).eq('is_subcontractor', true).order('name'),
       supabase.from('godowns').select('id,name').eq('is_active', true).order('name'),
-      supabase.from('bom_headers').select('id,bom_code,output_quantity,bom_items(id,item_id,quantity,uom_id,item:items!item_id(id,item_name),uom:uoms!uom_id(id,abbreviation))').eq('id', vData.bom_id).single(),
+      // Manual (BOM-less) vouchers have no bom_id — skip the lookup.
+      vData.bom_id
+        ? supabase.from('bom_headers').select('id,bom_code,output_quantity,bom_items(id,item_id,quantity,uom_id,item:items!item_id(id,item_name),uom:uoms!uom_id(id,abbreviation))').eq('id', vData.bom_id).single()
+        : Promise.resolve({ data: null }),
     ]);
+    const bomData = bomRes.data;
 
     setVoucher(vData);
     setItems((vi ?? []) as ProductionVoucherItem[]);

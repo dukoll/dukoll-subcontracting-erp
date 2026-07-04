@@ -1,11 +1,13 @@
 'use client';
 
-import { Fragment, useState, type ReactNode } from 'react';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import { Fragment, useState, useEffect, type ReactNode } from 'react';
+import { ChevronRight, ChevronDown, Columns3 } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
 
 export interface ExpandItem {
   name: string;
@@ -24,23 +26,63 @@ interface Props<T extends { id: string; _items?: ExpandItem[] }> {
   columns: VoucherColumn<T>[];
   rows: T[];
   onRowClick: (id: string) => void;
+  /** If set, the user's chosen columns are remembered under this key. */
+  storageKey?: string;
 }
 
-/** A voucher list table whose rows expand to reveal their line items at a glance (#8). */
+/** A voucher list table whose rows expand to reveal their line items at a glance (#8),
+ *  with a per-table column chooser. */
 export function ExpandableVoucherTable<T extends { id: string; _items?: ExpandItem[] }>({
-  columns, rows, onRowClick,
+  columns, rows, onRowClick, storageKey,
 }: Props<T>) {
   const [expanded, setExpanded] = useState<string | null>(null);
-  const totalCols = columns.length + 1;
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      const raw = localStorage.getItem(`cols:${storageKey}`);
+      if (raw) setHidden(new Set(JSON.parse(raw) as string[]));
+    } catch { /* ignore */ }
+  }, [storageKey]);
+
+  function toggleCol(header: string) {
+    setHidden(prev => {
+      const next = new Set(prev);
+      if (next.has(header)) next.delete(header); else next.add(header);
+      if (storageKey) { try { localStorage.setItem(`cols:${storageKey}`, JSON.stringify(Array.from(next))); } catch { /* ignore */ } }
+      return next;
+    });
+  }
+
+  const visibleColumns = columns.filter(c => !hidden.has(c.header));
+  const totalCols = visibleColumns.length + 1;
   const showDetail = rows.some(r => (r._items ?? []).some(i => i.detail != null && i.detail !== ''));
 
   return (
-    <div className="border rounded-xl overflow-hidden">
+    <div>
+      <div className="flex justify-end mb-2">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm"><Columns3 className="w-4 h-4 mr-1.5" />Columns</Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-56 p-2">
+            <div className="text-xs font-medium text-gray-500 px-1 pb-1.5">Show columns</div>
+            {columns.map((c, i) => (
+              <label key={i} className="flex items-center gap-2 px-1 py-1.5 text-sm rounded hover:bg-accent cursor-pointer">
+                <input type="checkbox" className="accent-red-600" checked={!hidden.has(c.header)} onChange={() => toggleCol(c.header)} />
+                {c.header}
+              </label>
+            ))}
+          </PopoverContent>
+        </Popover>
+      </div>
+      <div className="border rounded-xl overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="bg-gray-50">
             <TableHead className="w-10" />
-            {columns.map((c, i) => (
+            {visibleColumns.map((c, i) => (
               <TableHead key={i} className={c.className}>{c.header}</TableHead>
             ))}
           </TableRow>
@@ -60,7 +102,7 @@ export function ExpandableVoucherTable<T extends { id: string; _items?: ExpandIt
                       {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                     </button>
                   </TableCell>
-                  {columns.map((c, i) => (
+                  {visibleColumns.map((c, i) => (
                     <TableCell key={i} className={c.className}>{c.render(row)}</TableCell>
                   ))}
                 </TableRow>
@@ -102,6 +144,7 @@ export function ExpandableVoucherTable<T extends { id: string; _items?: ExpandIt
           })}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

@@ -96,7 +96,7 @@ export default function PurchaseVouchersPage() {
           {filtered.length === 0 ? (
             <EmptyState icon={ShoppingCart} title="No matching vouchers" description="Try adjusting the search or status filter." />
           ) : (
-            <ExpandableVoucherTable columns={columns} rows={filtered} onRowClick={id => router.push(`/vouchers/purchase/${id}`)} />
+            <ExpandableVoucherTable columns={columns} rows={filtered} storageKey="purchase-vouchers" onRowClick={id => router.push(`/vouchers/purchase/${id}`)} />
           )}
         </>
       )}

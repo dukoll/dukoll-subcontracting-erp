@@ -111,8 +111,8 @@ export default function BOMDetailPage() {
     setBom(bomData);
     setBomItems(biRes.data ?? []);
     const items = itemsRes.data ?? [];
-    setFinishedItems(items.filter(i => i.item_type === 'finished_goods'));
-    setAllItems(items.filter(i => ['raw_material', 'packing_material'].includes(i.item_type)));
+    setFinishedItems(items.filter(i => ['finished_goods', 'semi_finished_goods'].includes(i.item_type)));
+    setAllItems(items.filter(i => ['raw_material', 'packing_material', 'semi_finished_goods'].includes(i.item_type)));
     setUoms(uomsRes.data ?? []);
     setSubcontractors((subsRes.data ?? []) as Supplier[]);
 

@@ -187,7 +187,7 @@ export interface ProductionVoucher {
   voucher_no: string;
   date: string;
   subcontractor_id: string | null;
-  bom_id: string;
+  bom_id: string | null;
   finished_item_id: string;
   production_quantity: number;
   uom_id: string | null;

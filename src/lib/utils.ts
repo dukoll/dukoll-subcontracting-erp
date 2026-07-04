@@ -48,6 +48,7 @@ export function itemTypeLabel(type: string): string {
   const map: Record<string, string> = {
     raw_material: 'Raw Material',
     packing_material: 'Packing Material',
+    semi_finished_goods: 'Semi-Finished Goods',
     finished_goods: 'Finished Goods',
     service: 'Service',
   };
