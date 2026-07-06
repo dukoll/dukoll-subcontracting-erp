@@ -7,6 +7,7 @@ import type { UserRole, ProductionVoucher, Supplier } from '@/types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { DateRangeFilter, daysAgoISO } from '@/components/shared/DateRangeFilter';
+import { CustomizableTable, type TableColumn } from '@/components/shared/CustomizableTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -113,41 +114,23 @@ export default function ProductionReportPage() {
         <EmptyState title="No production records" description="Adjust filters and click Show Report." />
       ) : (
         <>
-          <div className="mb-2 text-sm text-gray-500">{rows.length} production vouchers</div>
-          <div className="rounded-lg border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Voucher No</TableHead>
-                  <TableHead>Finished Item</TableHead>
-                  <TableHead className="text-right">Production Qty</TableHead>
-                  <TableHead>UOM</TableHead>
-                  <TableHead>BOM Code</TableHead>
-                  <TableHead>Godown</TableHead>
-                  <TableHead>Subcontractor</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map(row => (
-                  <TableRow key={row.id}>
-                    <TableCell>{formatDate(row.date)}</TableCell>
-                    <TableCell className="font-mono text-xs">{row.voucher_no}</TableCell>
-                    <TableCell className="font-medium">{row.finished_item?.item_name ?? '—'}</TableCell>
-                    <TableCell className="text-right">{formatNumber(row.production_quantity)}</TableCell>
-                    <TableCell>{row.uom?.abbreviation ?? '—'}</TableCell>
-                    <TableCell className="font-mono text-xs">{row.bom?.bom_code ?? '—'}</TableCell>
-                    <TableCell>{(row as any).finished_goods_godown?.name ?? '—'}</TableCell>
-                    <TableCell>{row.subcontractor?.name ?? '—'}</TableCell>
-                    <TableCell>
-                      <Badge className={voucherStatusColor(row.status)}>{row.status}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <CustomizableTable
+            storageKey="report-production"
+            rows={rows}
+            rowKey={r => r.id}
+            toolbarLeft={`${rows.length} production vouchers`}
+            columns={[
+              { id: 'date', header: 'Date', cell: r => formatDate(r.date) },
+              { id: 'voucher', header: 'Voucher No', className: 'font-mono text-xs', cell: r => r.voucher_no },
+              { id: 'item', header: 'Finished Item', className: 'font-medium', cell: r => r.finished_item?.item_name ?? '—' },
+              { id: 'qty', header: 'Production Qty', className: 'text-right', cell: r => formatNumber(r.production_quantity) },
+              { id: 'uom', header: 'UOM', cell: r => r.uom?.abbreviation ?? '—' },
+              { id: 'bom', header: 'BOM Code', className: 'font-mono text-xs', cell: r => r.bom?.bom_code ?? '—' },
+              { id: 'godown', header: 'Godown', cell: r => (r as ProductionVoucher & { finished_goods_godown?: { name: string } }).finished_goods_godown?.name ?? '—' },
+              { id: 'subcontractor', header: 'Subcontractor', cell: r => r.subcontractor?.name ?? '—' },
+              { id: 'status', header: 'Status', cell: r => <Badge className={voucherStatusColor(r.status)}>{r.status}</Badge> },
+            ] as TableColumn<ProductionVoucher>[]}
+          />
           <div className="mt-3 text-sm text-gray-500 text-right px-1">
             Total production: {formatNumber(rows.reduce((s, r) => s + r.production_quantity, 0))} units
           </div>

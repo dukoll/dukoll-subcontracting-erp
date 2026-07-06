@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { formatNumber, itemTypeLabel } from '@/lib/utils';
 import type { UserRole, StockBalance } from '@/types';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { CustomizableTable, type TableColumn } from '@/components/shared/CustomizableTable';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -122,42 +123,21 @@ export default function StockBalancePage() {
         <EmptyState title="No stock data" description="No stock records match your filters." />
       ) : (
         <>
-          <div className="rounded-lg border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Godown</TableHead>
-                  <TableHead className="text-right">Opening</TableHead>
-                  <TableHead className="text-right">Inward</TableHead>
-                  <TableHead className="text-right">Outward</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
-                  <TableHead>UOM</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((row, i) => (
-                  <TableRow key={i} className={row.balance_qty < 0 ? 'bg-red-50' : ''}>
-                    <TableCell className="font-medium">{row.item_name}</TableCell>
-                    <TableCell>
-                      <Badge className={typeColors[row.item_type] ?? 'bg-gray-100 text-gray-800'}>
-                        {itemTypeLabel(row.item_type)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{row.godown_name}</TableCell>
-                    <TableCell className="text-right">0</TableCell>
-                    <TableCell className="text-right text-green-700">{formatNumber(row.total_in)}</TableCell>
-                    <TableCell className="text-right text-red-600">{formatNumber(row.total_out)}</TableCell>
-                    <TableCell className={`text-right font-semibold ${row.balance_qty < 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                      {formatNumber(row.balance_qty)}
-                    </TableCell>
-                    <TableCell>{row.uom_abbr}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <CustomizableTable
+            storageKey="report-stock-balance"
+            rows={filtered}
+            rowKey={r => `${r.item_id}-${r.godown_id}`}
+            rowClassName={r => r.balance_qty < 0 ? 'bg-red-50' : ''}
+            columns={[
+              { id: 'item', header: 'Item Name', className: 'font-medium', cell: r => r.item_name },
+              { id: 'type', header: 'Type', cell: r => <Badge className={typeColors[r.item_type] ?? 'bg-gray-100 text-gray-800'}>{itemTypeLabel(r.item_type)}</Badge> },
+              { id: 'godown', header: 'Godown', cell: r => r.godown_name },
+              { id: 'inward', header: 'Inward', className: 'text-right text-green-700', cell: r => formatNumber(r.total_in) },
+              { id: 'outward', header: 'Outward', className: 'text-right text-red-600', cell: r => formatNumber(r.total_out) },
+              { id: 'balance', header: 'Balance', className: 'text-right', cell: r => <span className={`font-semibold ${r.balance_qty < 0 ? 'text-red-600' : 'text-gray-900'}`}>{formatNumber(r.balance_qty)}</span> },
+              { id: 'uom', header: 'UOM', cell: r => r.uom_abbr },
+            ] as TableColumn<StockBalance>[]}
+          />
           <div className="mt-3 text-sm text-gray-500 flex justify-between px-1">
             <span>{filtered.length} item-godown combinations</span>
             <span className="font-medium">Total balance units: {formatNumber(totalBalance)}</span>

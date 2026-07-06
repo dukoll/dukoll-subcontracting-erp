@@ -27,6 +27,8 @@ interface CustomizableTableProps<T> {
   empty?: ReactNode;
   /** Optional content rendered to the left of the Columns button. */
   toolbarLeft?: ReactNode;
+  /** Optional extra className per row (e.g. to highlight negatives). */
+  rowClassName?: (row: T) => string;
 }
 
 /**
@@ -35,7 +37,7 @@ interface CustomizableTableProps<T> {
  * offered as `defaultHidden` columns that users opt into.
  */
 export function CustomizableTable<T>({
-  columns, rows, rowKey, storageKey, onRowClick, empty, toolbarLeft,
+  columns, rows, rowKey, storageKey, onRowClick, empty, toolbarLeft, rowClassName,
 }: CustomizableTableProps<T>) {
   const [hidden, setHidden] = useState<Set<string>>(
     () => new Set(columns.filter(c => c.defaultHidden).map(c => c.id)),
@@ -94,7 +96,7 @@ export function CustomizableTable<T>({
             ) : rows.map(row => (
               <TableRow
                 key={rowKey(row)}
-                className={onRowClick ? 'cursor-pointer hover:bg-gray-50' : undefined}
+                className={[onRowClick ? 'cursor-pointer hover:bg-gray-50' : '', rowClassName?.(row) ?? ''].filter(Boolean).join(' ') || undefined}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
               >
                 {visible.map(c => <TableCell key={c.id} className={c.className}>{c.cell(row)}</TableCell>)}

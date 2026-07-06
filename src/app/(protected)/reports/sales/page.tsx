@@ -8,6 +8,7 @@ import type { UserRole, SalesVoucher, Customer } from '@/types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { DateRangeFilter, daysAgoISO } from '@/components/shared/DateRangeFilter';
+import { CustomizableTable, type TableColumn } from '@/components/shared/CustomizableTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -148,43 +149,25 @@ export default function SalesReportPage() {
         <EmptyState title="No sales records" description="Adjust filters and click Show Report." />
       ) : (
         <>
-          <div className="mb-2 text-sm text-gray-500">{flatRows.length} line items across {rows.length} vouchers</div>
-          <div className="rounded-lg border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Voucher No</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Item</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead>UOM</TableHead>
-                  <TableHead>Godown</TableHead>
-                  {showPricing && <>
-                    <TableHead className="text-right">Rate</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {flatRows.map((row, i) => (
-                  <TableRow key={i}>
-                    <TableCell>{formatDate(row.date)}</TableCell>
-                    <TableCell className="font-mono text-xs">{row.voucher_no}</TableCell>
-                    <TableCell>{row.customer}</TableCell>
-                    <TableCell className="font-medium">{row.item_name}</TableCell>
-                    <TableCell className="text-right">{formatNumber(row.quantity)}</TableCell>
-                    <TableCell>{row.uom}</TableCell>
-                    <TableCell>{row.godown}</TableCell>
-                    {showPricing && <>
-                      <TableCell className="text-right">{row.rate != null ? formatCurrency(row.rate) : '—'}</TableCell>
-                      <TableCell className="text-right font-medium">{row.amount != null ? formatCurrency(row.amount) : '—'}</TableCell>
-                    </>}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <CustomizableTable
+            storageKey="report-sales"
+            rows={flatRows.map((r, i) => ({ ...r, _k: String(i) }))}
+            rowKey={r => r._k}
+            toolbarLeft={`${flatRows.length} line items across ${rows.length} vouchers`}
+            columns={[
+              { id: 'date', header: 'Date', cell: r => formatDate(r.date) },
+              { id: 'voucher', header: 'Voucher No', className: 'font-mono text-xs', cell: r => r.voucher_no },
+              { id: 'customer', header: 'Customer', cell: r => r.customer },
+              { id: 'item', header: 'Item', className: 'font-medium', cell: r => r.item_name },
+              { id: 'qty', header: 'Qty', className: 'text-right', cell: r => formatNumber(r.quantity) },
+              { id: 'uom', header: 'UOM', cell: r => r.uom },
+              { id: 'godown', header: 'Godown', cell: r => r.godown },
+              ...(showPricing ? [
+                { id: 'rate', header: 'Rate', className: 'text-right', cell: (r: typeof flatRows[number]) => r.rate != null ? formatCurrency(r.rate) : '—' },
+                { id: 'amount', header: 'Amount', className: 'text-right font-medium', cell: (r: typeof flatRows[number]) => r.amount != null ? formatCurrency(r.amount) : '—' },
+              ] : []),
+            ] as TableColumn<typeof flatRows[number] & { _k: string }>[]}
+          />
           <div className="mt-3 text-sm text-gray-500 flex justify-between px-1">
             <span>Total Qty: {formatNumber(totalQty)}</span>
             {showPricing && <span className="font-medium">Total Amount: {formatCurrency(totalAmount)}</span>}
