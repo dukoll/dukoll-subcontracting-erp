@@ -68,6 +68,8 @@ export default function PurchaseVouchersPage() {
     { header: 'Voucher No', render: v => <span className="font-mono text-sm font-medium">{v.voucher_no}</span> },
     { header: 'Date', render: v => formatDate(v.date) },
     { header: 'Supplier', render: v => v.supplier?.name ?? '—' },
+    { header: 'Godown', render: v => (v as Row & { items?: { godown?: { name: string } }[] }).items?.[0]?.godown?.name ?? '—' },
+    { header: 'Items', className: 'text-center', render: v => (v._items?.length ?? 0) },
     ...(showPricing ? [{ header: 'Total Amount', className: 'text-right', render: (v: Row) => <span className="font-medium">{formatCurrency(v.total_amount)}</span> }] : []),
     { header: 'Status', render: v => <Badge className={voucherStatusColor(v.status)}>{voucherStatusLabel(v.status)}</Badge> },
   ];

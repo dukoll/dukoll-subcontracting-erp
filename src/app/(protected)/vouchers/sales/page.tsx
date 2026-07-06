@@ -38,7 +38,7 @@ export default function SalesVouchersPage() {
       }
       const { data, error } = await supabase
         .from('sales_vouchers')
-        .select('*, customer:customers(id, name, city), items:sales_voucher_items(quantity, item:items(item_name), uom:uoms(abbreviation))')
+        .select('*, customer:customers(id, name, city), godown:godowns(name), items:sales_voucher_items(quantity, item:items(item_name), uom:uoms(abbreviation))')
         .order('date', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -69,6 +69,8 @@ export default function SalesVouchersPage() {
     { header: 'Date', render: v => formatDate(v.date) },
     { header: 'Customer', render: v => v.customer?.name ?? '—' },
     { header: 'City', render: v => v.customer?.city ?? '—' },
+    { header: 'Godown', render: v => (v as Row & { godown?: { name: string } }).godown?.name ?? '—' },
+    { header: 'Items', className: 'text-center', render: v => (v._items?.length ?? 0) },
     ...(showPricing ? [{ header: 'Total Amount', className: 'text-right', render: (v: Row) => <span className="font-medium">{formatCurrency(v.total_amount)}</span> }] : []),
     { header: 'Status', render: v => <Badge className={voucherStatusColor(v.status)}>{voucherStatusLabel(v.status)}</Badge> },
   ];

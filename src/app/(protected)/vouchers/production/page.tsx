@@ -31,7 +31,7 @@ export default function ProductionVouchersPage() {
       const supabase = createClient();
       const { data, error } = await supabase
         .from('production_vouchers')
-        .select('*, subcontractor:suppliers!subcontractor_id(id, name), finished_item:items!finished_item_id(id, item_name), uom:uoms!uom_id(id, abbreviation), items:production_voucher_items(quantity, movement_type, item:items(item_name), uom:uoms(abbreviation))')
+        .select('*, subcontractor:suppliers!subcontractor_id(id, name), finished_item:items!finished_item_id(id, item_name), uom:uoms!uom_id(id, abbreviation), finished_goods_godown:godowns!finished_goods_godown_id(name), items:production_voucher_items(quantity, movement_type, item:items(item_name), uom:uoms(abbreviation))')
         .order('date', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -63,6 +63,7 @@ export default function ProductionVouchersPage() {
     { header: 'Subcontractor', render: v => v.subcontractor?.name ?? '—' },
     { header: 'Finished Item', render: v => v.finished_item?.item_name ?? '—' },
     { header: 'Production Qty', className: 'text-right', render: v => <>{formatNumber(v.production_quantity)} <span className="text-gray-500 text-xs">{v.uom?.abbreviation ?? ''}</span></> },
+    { header: 'Godown', render: v => (v as Row & { finished_goods_godown?: { name: string } }).finished_goods_godown?.name ?? '—' },
     { header: 'Status', render: v => <Badge className={voucherStatusColor(v.status)}>{voucherStatusLabel(v.status)}</Badge> },
   ];
 
