@@ -8,6 +8,7 @@ import type { UserRole, Item, RawMaterialPrice } from '@/types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { AccessDenied } from '@/components/shared/AccessDenied';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { CustomizableTable, type TableColumn } from '@/components/shared/CustomizableTable';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/searchable-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -121,48 +122,23 @@ export default function PriceHistoryPage() {
       ) : rows.length === 0 ? (
         <EmptyState title="No price records" description="No price history found." />
       ) : (
-        <div className="rounded-lg border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>Supplier</TableHead>
-                <TableHead className="text-right">Price/UOM</TableHead>
-                <TableHead>UOM</TableHead>
-                <TableHead>Effective From</TableHead>
-                <TableHead>Effective To</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Entered By</TableHead>
-                <TableHead>Approved By</TableHead>
-                <TableHead>Remarks</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map(row => (
-                <TableRow key={row.id}>
-                  <TableCell className="font-medium">{row.item?.item_name ?? '—'}</TableCell>
-                  <TableCell>{row.supplier?.name ?? '—'}</TableCell>
-                  <TableCell className="text-right font-medium">{formatCurrency(row.price_per_uom)}</TableCell>
-                  <TableCell>{row.uom?.abbreviation ?? '—'}</TableCell>
-                  <TableCell>{formatDate(row.effective_from)}</TableCell>
-                  <TableCell>{row.effective_to ? formatDate(row.effective_to) : <span className="text-gray-400">ongoing</span>}</TableCell>
-                  <TableCell>
-                    {row.is_active
-                      ? <Badge className="bg-green-100 text-green-800">Active</Badge>
-                      : <Badge variant="secondary">Expired</Badge>}
-                  </TableCell>
-                  <TableCell className="text-sm">{row.creator?.full_name ?? '—'}</TableCell>
-                  <TableCell className="text-sm">
-                    {row.approver?.full_name
-                      ? <span className="text-green-700">{row.approver.full_name}</span>
-                      : <span className="text-gray-400">Pending</span>}
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate text-sm text-gray-500">{row.remarks ?? '—'}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <CustomizableTable
+          storageKey="report-price-history"
+          rows={rows}
+          rowKey={r => r.id}
+          columns={[
+            { id: 'item', header: 'Item', className: 'font-medium', cell: r => r.item?.item_name ?? '—' },
+            { id: 'supplier', header: 'Supplier', cell: r => r.supplier?.name ?? '—' },
+            { id: 'price', header: 'Price/UOM', className: 'text-right font-medium', cell: r => formatCurrency(r.price_per_uom) },
+            { id: 'uom', header: 'UOM', cell: r => r.uom?.abbreviation ?? '—' },
+            { id: 'from', header: 'Effective From', cell: r => formatDate(r.effective_from) },
+            { id: 'to', header: 'Effective To', cell: r => r.effective_to ? formatDate(r.effective_to) : <span className="text-gray-400">ongoing</span> },
+            { id: 'status', header: 'Status', cell: r => r.is_active ? <Badge className="bg-green-100 text-green-800">Active</Badge> : <Badge variant="secondary">Expired</Badge> },
+            { id: 'creator', header: 'Entered By', className: 'text-sm', defaultHidden: true, cell: r => r.creator?.full_name ?? '—' },
+            { id: 'approver', header: 'Approved By', className: 'text-sm', cell: r => r.approver?.full_name ? <span className="text-green-700">{r.approver.full_name}</span> : <span className="text-gray-400">Pending</span> },
+            { id: 'remarks', header: 'Remarks', className: 'max-w-xs truncate text-sm text-gray-500', defaultHidden: true, cell: r => r.remarks ?? '—' },
+          ] as TableColumn<PriceHistoryRow>[]}
+        />
       )}
     </div>
   );

@@ -8,6 +8,7 @@ import type { UserRole, Item } from '@/types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { AccessDenied } from '@/components/shared/AccessDenied';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { CustomizableTable, type TableColumn } from '@/components/shared/CustomizableTable';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/searchable-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -138,47 +139,26 @@ export default function VarianceReportPage() {
       ) : rows.length === 0 ? (
         <EmptyState title="No price changes" description="No consecutive price entries found for comparison." />
       ) : (
-        <div className="rounded-lg border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead className="text-right">Old Price</TableHead>
-                <TableHead className="text-right">New Price</TableHead>
-                <TableHead className="text-right">Difference</TableHead>
-                <TableHead className="text-right">% Change</TableHead>
-                <TableHead>Effective Date</TableHead>
-                <TableHead>Remarks</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row, i) => {
-                const isIncrease = row.difference > 0;
-                const isDecrease = row.difference < 0;
-                return (
-                  <TableRow key={i}>
-                    <TableCell className="font-medium">{row.item_name}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(row.old_price)}</TableCell>
-                    <TableCell className="text-right font-semibold">{formatCurrency(row.new_price)}</TableCell>
-                    <TableCell className={`text-right font-medium ${isIncrease ? 'text-red-600' : isDecrease ? 'text-green-600' : 'text-gray-500'}`}>
-                      <span className="flex items-center justify-end gap-1">
-                        {isIncrease ? <TrendingUp className="w-3.5 h-3.5" /> : isDecrease ? <TrendingDown className="w-3.5 h-3.5" /> : null}
-                        {row.difference >= 0 ? '+' : ''}{formatCurrency(row.difference)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge className={isIncrease ? 'bg-red-100 text-red-800' : isDecrease ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                        {row.pct_change >= 0 ? '+' : ''}{row.pct_change.toFixed(1)}%
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{formatDate(row.new_effective_date)}</TableCell>
-                    <TableCell className="max-w-xs truncate text-sm text-gray-500">{row.remarks ?? '—'}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+        <CustomizableTable
+          storageKey="report-variance"
+          rows={rows.map((r, i) => ({ ...r, _k: String(i) }))}
+          rowKey={r => r._k}
+          columns={[
+            { id: 'item', header: 'Item', className: 'font-medium', cell: r => r.item_name },
+            { id: 'old', header: 'Old Price', className: 'text-right', cell: r => formatCurrency(r.old_price) },
+            { id: 'new', header: 'New Price', className: 'text-right font-semibold', cell: r => formatCurrency(r.new_price) },
+            { id: 'diff', header: 'Difference', className: 'text-right font-medium', cell: r => {
+              const inc = r.difference > 0, dec = r.difference < 0;
+              return <span className={`flex items-center justify-end gap-1 ${inc ? 'text-red-600' : dec ? 'text-green-600' : 'text-gray-500'}`}>
+                {inc ? <TrendingUp className="w-3.5 h-3.5" /> : dec ? <TrendingDown className="w-3.5 h-3.5" /> : null}
+                {r.difference >= 0 ? '+' : ''}{formatCurrency(r.difference)}
+              </span>;
+            } },
+            { id: 'pct', header: '% Change', className: 'text-right', cell: r => <Badge className={r.difference > 0 ? 'bg-red-100 text-red-800' : r.difference < 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>{r.pct_change >= 0 ? '+' : ''}{r.pct_change.toFixed(1)}%</Badge> },
+            { id: 'date', header: 'Effective Date', cell: r => formatDate(r.new_effective_date) },
+            { id: 'remarks', header: 'Remarks', className: 'max-w-xs truncate text-sm text-gray-500', defaultHidden: true, cell: r => r.remarks ?? '—' },
+          ] as TableColumn<VarianceRow & { _k: string }>[]}
+        />
       )}
     </div>
   );

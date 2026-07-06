@@ -7,6 +7,7 @@ import type { UserRole, Item, Godown } from '@/types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { DateRangeFilter, daysAgoISO } from '@/components/shared/DateRangeFilter';
+import { CustomizableTable, type TableColumn } from '@/components/shared/CustomizableTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -161,40 +162,20 @@ export default function StockLedgerPage() {
       )}
 
       {rows.length > 0 && (
-        <div className="rounded-lg border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Voucher Type</TableHead>
-                <TableHead>Voucher No</TableHead>
-                <TableHead>Godown</TableHead>
-                <TableHead className="text-right">In Qty</TableHead>
-                <TableHead className="text-right">Out Qty</TableHead>
-                <TableHead className="text-right">Running Balance</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row, i) => (
-                <TableRow key={i}>
-                  <TableCell>{formatDate(row.date)}</TableCell>
-                  <TableCell>
-                    <Badge className={VOUCHER_COLORS[row.voucher_type] ?? 'bg-gray-100 text-gray-800'}>
-                      {row.voucher_type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{row.voucher_no}</TableCell>
-                  <TableCell className="text-sm text-gray-600">{godowns.find(g => g.id === row.godown_id)?.name ?? '—'}</TableCell>
-                  <TableCell className="text-right text-green-700">{row.in_qty > 0 ? formatNumber(row.in_qty) : '—'}</TableCell>
-                  <TableCell className="text-right text-red-600">{row.out_qty > 0 ? formatNumber(row.out_qty) : '—'}</TableCell>
-                  <TableCell className={`text-right font-semibold ${(row.running_balance ?? 0) < 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                    {formatNumber(row.running_balance ?? 0)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <CustomizableTable
+          storageKey="report-stock-ledger"
+          rows={rows.map((r, i) => ({ ...r, _k: String(i) }))}
+          rowKey={r => r._k}
+          columns={[
+            { id: 'date', header: 'Date', cell: r => formatDate(r.date) },
+            { id: 'type', header: 'Voucher Type', cell: r => <Badge className={VOUCHER_COLORS[r.voucher_type] ?? 'bg-gray-100 text-gray-800'}>{r.voucher_type}</Badge> },
+            { id: 'voucher', header: 'Voucher No', className: 'font-mono text-xs', cell: r => r.voucher_no },
+            { id: 'godown', header: 'Godown', className: 'text-sm text-gray-600', cell: r => godowns.find(g => g.id === r.godown_id)?.name ?? '—' },
+            { id: 'in', header: 'In Qty', className: 'text-right text-green-700', cell: r => r.in_qty > 0 ? formatNumber(r.in_qty) : '—' },
+            { id: 'out', header: 'Out Qty', className: 'text-right text-red-600', cell: r => r.out_qty > 0 ? formatNumber(r.out_qty) : '—' },
+            { id: 'balance', header: 'Running Balance', className: 'text-right', cell: r => <span className={`font-semibold ${(r.running_balance ?? 0) < 0 ? 'text-red-600' : 'text-gray-900'}`}>{formatNumber(r.running_balance ?? 0)}</span> },
+          ] as TableColumn<LedgerRow & { _k: string }>[]}
+        />
       )}
     </div>
   );

@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { AccessDenied } from '@/components/shared/AccessDenied';
 import { DateRangeFilter, daysAgoISO } from '@/components/shared/DateRangeFilter';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { CustomizableTable, type TableColumn } from '@/components/shared/CustomizableTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -158,40 +159,23 @@ export default function InvoiceReportPage() {
       ) : (
         <>
           <div className="mb-2 text-sm text-gray-500">{rows.length} production vouchers</div>
-          <div className="rounded-lg border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Voucher No</TableHead>
-                  <TableHead>Subcontractor</TableHead>
-                  <TableHead>Finished Item</TableHead>
-                  <TableHead className="text-right">Production Qty</TableHead>
-                  <TableHead>UOM</TableHead>
-                  <TableHead className="text-right">Material Cost</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row, i) => (
-                  <TableRow key={i}>
-                    <TableCell>{formatDate(row.date)}</TableCell>
-                    <TableCell className="font-mono text-xs">{row.voucher_no}</TableCell>
-                    <TableCell>{row.subcontractor}</TableCell>
-                    <TableCell className="font-medium">{row.finished_item}</TableCell>
-                    <TableCell className="text-right">{formatNumber(row.production_qty)}</TableCell>
-                    <TableCell>{row.uom_abbr}</TableCell>
-                    <TableCell className="text-right font-semibold">{formatCurrency(row.material_cost)}</TableCell>
-                    <TableCell>
-                      {row.missing_prices > 0
-                        ? <span className="text-xs text-amber-600">{row.missing_prices} price(s) missing</span>
-                        : <span className="text-xs text-green-600">Complete</span>}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <CustomizableTable
+            storageKey="report-invoice"
+            rows={rows.map((r, i) => ({ ...r, _k: String(i) }))}
+            rowKey={r => r._k}
+            columns={[
+              { id: 'date', header: 'Date', cell: r => formatDate(r.date) },
+              { id: 'voucher', header: 'Voucher No', className: 'font-mono text-xs', cell: r => r.voucher_no },
+              { id: 'subcontractor', header: 'Subcontractor', cell: r => r.subcontractor },
+              { id: 'item', header: 'Finished Item', className: 'font-medium', cell: r => r.finished_item },
+              { id: 'qty', header: 'Production Qty', className: 'text-right', cell: r => formatNumber(r.production_qty) },
+              { id: 'uom', header: 'UOM', cell: r => r.uom_abbr },
+              { id: 'cost', header: 'Material Cost', className: 'text-right font-semibold', cell: r => formatCurrency(r.material_cost) },
+              { id: 'status', header: 'Status', cell: r => r.missing_prices > 0
+                ? <span className="text-xs text-amber-600">{r.missing_prices} price(s) missing</span>
+                : <span className="text-xs text-green-600">Complete</span> },
+            ] as TableColumn<InvoiceRow & { _k: string }>[]}
+          />
           <div className="mt-3 bg-gray-50 rounded-lg p-4 flex justify-between text-sm">
             <span>Total Production: <strong>{formatNumber(totalQty)}</strong> units</span>
             <span>Total Material Cost: <strong>{formatCurrency(totalMaterial)}</strong></span>

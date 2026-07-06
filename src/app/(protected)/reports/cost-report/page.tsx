@@ -8,6 +8,7 @@ import type { UserRole, BOMHeader } from '@/types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { AccessDenied } from '@/components/shared/AccessDenied';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { CustomizableTable, type TableColumn } from '@/components/shared/CustomizableTable';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -130,44 +131,24 @@ export default function CostReportPage() {
       ) : rows.length === 0 ? (
         <EmptyState title="No active BOMs" description="No active BOMs found to calculate costs." />
       ) : (
-        <div className="rounded-lg border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>BOM Code</TableHead>
-                <TableHead>Finished Item</TableHead>
-                <TableHead className="text-right">Output Qty</TableHead>
-                <TableHead>UOM</TableHead>
-                <TableHead className="text-right">RM Cost</TableHead>
-                <TableHead className="text-right">PM Cost</TableHead>
-                <TableHead className="text-right">Total Material Cost</TableHead>
-                <TableHead className="text-right">Cost per UOM</TableHead>
-                <TableHead>Data</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map(row => (
-                <TableRow key={row.bom_id}>
-                  <TableCell className="font-mono text-xs">{row.bom_code}</TableCell>
-                  <TableCell className="font-medium">{row.finished_item}</TableCell>
-                  <TableCell className="text-right">{formatNumber(row.output_qty)}</TableCell>
-                  <TableCell>{row.uom_abbr}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(row.rm_cost)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(row.pm_cost)}</TableCell>
-                  <TableCell className="text-right font-semibold">{formatCurrency(row.total_material_cost)}</TableCell>
-                  <TableCell className="text-right">
-                    <Badge className="bg-red-100 text-red-800">{formatCurrency(row.cost_per_uom)}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    {row.missing_prices > 0
-                      ? <Badge className="bg-amber-100 text-amber-800">{row.missing_prices} missing</Badge>
-                      : <Badge className="bg-green-100 text-green-800">Complete</Badge>}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <CustomizableTable
+          storageKey="report-cost"
+          rows={rows}
+          rowKey={r => r.bom_id}
+          columns={[
+            { id: 'bom', header: 'BOM Code', className: 'font-mono text-xs', cell: r => r.bom_code },
+            { id: 'item', header: 'Finished Item', className: 'font-medium', cell: r => r.finished_item },
+            { id: 'output', header: 'Output Qty', className: 'text-right', cell: r => formatNumber(r.output_qty) },
+            { id: 'uom', header: 'UOM', cell: r => r.uom_abbr },
+            { id: 'rm', header: 'RM Cost', className: 'text-right', cell: r => formatCurrency(r.rm_cost) },
+            { id: 'pm', header: 'PM Cost', className: 'text-right', cell: r => formatCurrency(r.pm_cost) },
+            { id: 'total', header: 'Total Material Cost', className: 'text-right font-semibold', cell: r => formatCurrency(r.total_material_cost) },
+            { id: 'peruom', header: 'Cost per UOM', className: 'text-right', cell: r => <Badge className="bg-red-100 text-red-800">{formatCurrency(r.cost_per_uom)}</Badge> },
+            { id: 'data', header: 'Data', cell: r => r.missing_prices > 0
+              ? <Badge className="bg-amber-100 text-amber-800">{r.missing_prices} missing</Badge>
+              : <Badge className="bg-green-100 text-green-800">Complete</Badge> },
+          ] as TableColumn<CostRow>[]}
+        />
       )}
     </div>
   );
