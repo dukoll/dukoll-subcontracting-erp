@@ -13,13 +13,14 @@ import { godownTypeLabel } from '@/lib/utils';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { CustomizableTable, type TableColumn } from '@/components/shared/CustomizableTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/searchable-select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 
@@ -169,40 +170,25 @@ export default function GodownsPage() {
           </Select>
           {(search || typeFilter) && <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setTypeFilter(''); }}>Clear</Button>}
         </div>
-        <div className="rounded-lg border bg-white overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Parent Godown</TableHead>
-                <TableHead>Status</TableHead>
-                {isAdmin && <TableHead className="w-24 text-right">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredGodowns.length === 0 && (
-                <TableRow><TableCell colSpan={isAdmin ? 5 : 4} className="text-center text-gray-400 py-8">No godowns match your filters.</TableCell></TableRow>
-              )}
-              {filteredGodowns.map(g => (
-                <TableRow key={g.id}>
-                  <TableCell className="font-medium">{g.name}</TableCell>
-                  <TableCell><Badge variant="outline">{godownTypeLabel(g.godown_type)}</Badge></TableCell>
-                  <TableCell className="text-gray-500 text-sm">{parentName(g.parent_godown_id)}</TableCell>
-                  <TableCell><Badge variant={g.is_active ? 'default' : 'secondary'}>{g.is_active ? 'Active' : 'Inactive'}</Badge></TableCell>
-                  {isAdmin && (
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => openEdit(g)}><Pencil className="w-4 h-4" /></Button>
-                        <Button size="icon" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setDeleteTarget(g)}><Trash2 className="w-4 h-4" /></Button>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <CustomizableTable
+          storageKey="godowns"
+          rows={filteredGodowns}
+          rowKey={g => g.id}
+          empty="No godowns match your filters."
+          columns={[
+            { id: 'name', header: 'Name', className: 'font-medium', cell: g => g.name },
+            { id: 'type', header: 'Type', cell: g => <Badge variant="outline">{godownTypeLabel(g.godown_type)}</Badge> },
+            { id: 'parent', header: 'Parent Godown', className: 'text-gray-500 text-sm', cell: g => parentName(g.parent_godown_id) },
+            { id: 'address', header: 'Address', defaultHidden: true, className: 'text-gray-500 text-sm max-w-xs truncate', cell: g => g.address ?? '—' },
+            { id: 'status', header: 'Status', cell: g => <Badge variant={g.is_active ? 'default' : 'secondary'}>{g.is_active ? 'Active' : 'Inactive'}</Badge> },
+            ...(isAdmin ? [{ id: 'actions', header: 'Actions', alwaysVisible: true, className: 'w-24 text-right', cell: (g: Godown) => (
+              <div className="flex justify-end gap-1">
+                <Button size="icon" variant="ghost" onClick={() => openEdit(g)}><Pencil className="w-4 h-4" /></Button>
+                <Button size="icon" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setDeleteTarget(g)}><Trash2 className="w-4 h-4" /></Button>
+              </div>
+            ) }] : []),
+          ] as TableColumn<Godown>[]}
+        />
         </>
       )}
 

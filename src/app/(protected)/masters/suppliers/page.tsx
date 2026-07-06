@@ -12,13 +12,14 @@ import type { Supplier, Godown, UserRole } from '@/types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { CustomizableTable, type TableColumn } from '@/components/shared/CustomizableTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/searchable-select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 
@@ -178,48 +179,28 @@ export default function SuppliersPage() {
           </Select>
           {(search || typeFilter) && <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setTypeFilter(''); }}>Clear</Button>}
         </div>
-        <div className="rounded-lg border bg-white overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Default Godown</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                {isAdmin && <TableHead className="w-24 text-right">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredSuppliers.length === 0 && (
-                <TableRow><TableCell colSpan={isAdmin ? 7 : 6} className="text-center text-gray-400 py-8">No suppliers match your filters.</TableCell></TableRow>
-              )}
-              {filteredSuppliers.map(s => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-medium">{s.name}</TableCell>
-                  <TableCell className="text-gray-500 text-sm">{s.phone ?? '—'}</TableCell>
-                  <TableCell className="text-gray-500 text-sm">{s.email ?? '—'}</TableCell>
-                  <TableCell className="text-gray-500 text-sm">{s.default_godown?.name ?? '—'}</TableCell>
-                  <TableCell>
-                    <Badge variant={s.is_subcontractor ? 'default' : 'outline'}>
-                      {s.is_subcontractor ? 'Subcontractor' : 'Supplier'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell><Badge variant={s.is_active ? 'default' : 'secondary'}>{s.is_active ? 'Active' : 'Inactive'}</Badge></TableCell>
-                  {isAdmin && (
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => openEdit(s)}><Pencil className="w-4 h-4" /></Button>
-                        <Button size="icon" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setDeleteTarget(s)}><Trash2 className="w-4 h-4" /></Button>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <CustomizableTable
+          storageKey="suppliers"
+          rows={filteredSuppliers}
+          rowKey={s => s.id}
+          empty="No suppliers match your filters."
+          columns={[
+            { id: 'name', header: 'Name', className: 'font-medium', cell: s => s.name },
+            { id: 'phone', header: 'Phone', className: 'text-gray-500 text-sm', cell: s => s.phone ?? '—' },
+            { id: 'email', header: 'Email', className: 'text-gray-500 text-sm', cell: s => s.email ?? '—' },
+            { id: 'gst', header: 'GST No', defaultHidden: true, className: 'text-gray-500 text-sm font-mono', cell: s => s.gst_no ?? '—' },
+            { id: 'address', header: 'Address', defaultHidden: true, className: 'text-gray-500 text-sm max-w-xs truncate', cell: s => s.address ?? '—' },
+            { id: 'godown', header: 'Default Godown', className: 'text-gray-500 text-sm', cell: s => s.default_godown?.name ?? '—' },
+            { id: 'type', header: 'Type', cell: s => <Badge variant={s.is_subcontractor ? 'default' : 'outline'}>{s.is_subcontractor ? 'Subcontractor' : 'Supplier'}</Badge> },
+            { id: 'status', header: 'Status', cell: s => <Badge variant={s.is_active ? 'default' : 'secondary'}>{s.is_active ? 'Active' : 'Inactive'}</Badge> },
+            ...(isAdmin ? [{ id: 'actions', header: 'Actions', alwaysVisible: true, className: 'w-24 text-right', cell: (s: Supplier) => (
+              <div className="flex justify-end gap-1">
+                <Button size="icon" variant="ghost" onClick={() => openEdit(s)}><Pencil className="w-4 h-4" /></Button>
+                <Button size="icon" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setDeleteTarget(s)}><Trash2 className="w-4 h-4" /></Button>
+              </div>
+            ) }] : []),
+          ] as TableColumn<Supplier>[]}
+        />
         </>
       )}
 

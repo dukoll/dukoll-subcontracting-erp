@@ -12,6 +12,7 @@ import type { ItemGroup, UserRole } from '@/types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { CustomizableTable, type TableColumn } from '@/components/shared/CustomizableTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -138,38 +139,23 @@ export default function ItemGroupsPage() {
           <Input className="w-full sm:w-72" placeholder="Search name or description…" value={search} onChange={e => setSearch(e.target.value)} />
           {search && <Button variant="ghost" size="sm" onClick={() => setSearch('')}>Clear</Button>}
         </div>
-        <div className="rounded-lg border bg-white overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Status</TableHead>
-                {isAdmin && <TableHead className="w-24 text-right">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredGroups.length === 0 && (
-                <TableRow><TableCell colSpan={isAdmin ? 4 : 3} className="text-center text-gray-400 py-8">No item groups match your search.</TableCell></TableRow>
-              )}
-              {filteredGroups.map(g => (
-                <TableRow key={g.id}>
-                  <TableCell className="font-medium">{g.name}</TableCell>
-                  <TableCell className="text-gray-500 text-sm">{g.description ?? '—'}</TableCell>
-                  <TableCell><Badge variant={g.is_active ? 'default' : 'secondary'}>{g.is_active ? 'Active' : 'Inactive'}</Badge></TableCell>
-                  {isAdmin && (
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => openEdit(g)}><Pencil className="w-4 h-4" /></Button>
-                        <Button size="icon" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setDeleteTarget(g)}><Trash2 className="w-4 h-4" /></Button>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <CustomizableTable
+          storageKey="item-groups"
+          rows={filteredGroups}
+          rowKey={g => g.id}
+          empty="No item groups match your search."
+          columns={[
+            { id: 'name', header: 'Name', className: 'font-medium', cell: g => g.name },
+            { id: 'description', header: 'Description', className: 'text-gray-500 text-sm', cell: g => g.description ?? '—' },
+            { id: 'status', header: 'Status', cell: g => <Badge variant={g.is_active ? 'default' : 'secondary'}>{g.is_active ? 'Active' : 'Inactive'}</Badge> },
+            ...(isAdmin ? [{ id: 'actions', header: 'Actions', alwaysVisible: true, className: 'w-24 text-right', cell: (g: ItemGroup) => (
+              <div className="flex justify-end gap-1">
+                <Button size="icon" variant="ghost" onClick={() => openEdit(g)}><Pencil className="w-4 h-4" /></Button>
+                <Button size="icon" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setDeleteTarget(g)}><Trash2 className="w-4 h-4" /></Button>
+              </div>
+            ) }] : []),
+          ] as TableColumn<ItemGroup>[]}
+        />
         </>
       )}
 

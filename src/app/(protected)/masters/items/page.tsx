@@ -13,13 +13,14 @@ import { itemTypeLabel, formatNumber } from '@/lib/utils';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { CustomizableTable, type TableColumn } from '@/components/shared/CustomizableTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/searchable-select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 
@@ -236,53 +237,29 @@ export default function ItemsPage() {
       ) : items.length === 0 ? (
         <EmptyState icon={Package} title="No items" description="Create your first item." action={isAdmin ? <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4 mr-1" />Add Item</Button> : undefined} />
       ) : (
-        <div className="rounded-lg border bg-white overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item Name</TableHead>
-                <TableHead>Group</TableHead>
-                <TableHead>UOM</TableHead>
-                <TableHead className="text-right">Weight (Kg)</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                {isAdmin && <TableHead className="w-24 text-right">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map(item => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.item_name}</TableCell>
-                  <TableCell className="text-gray-500 text-sm">{item.item_group?.name ?? '—'}</TableCell>
-                  <TableCell className="text-gray-500 text-sm">{item.uom ? `${item.uom.name} (${item.uom.abbreviation})` : '—'}</TableCell>
-                  <TableCell className="text-right font-mono text-sm">{item.weight_kg != null ? formatNumber(item.weight_kg) : '—'}</TableCell>
-                  <TableCell>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${ITEM_TYPE_COLOR[item.item_type]}`}>
-                      {itemTypeLabel(item.item_type)}
-                    </span>
-                  </TableCell>
-                  <TableCell><Badge variant={item.is_active ? 'default' : 'secondary'}>{item.is_active ? 'Active' : 'Inactive'}</Badge></TableCell>
-                  {isAdmin && (
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button size="icon" variant="ghost" title="Duplicate" onClick={() => openDuplicate(item)}><Copy className="w-4 h-4" /></Button>
-                        <Button size="icon" variant="ghost" title="Edit" onClick={() => openEdit(item)}><Pencil className="w-4 h-4" /></Button>
-                        <Button size="icon" variant="ghost" className="text-red-500 hover:text-red-600" title="Delete" onClick={() => setDeleteTarget(item)}><Trash2 className="w-4 h-4" /></Button>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={isAdmin ? 7 : 6} className="text-center text-gray-400 py-10">
-                    No items match the current filters.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <CustomizableTable
+          storageKey="items"
+          rows={filtered}
+          rowKey={i => i.id}
+          empty="No items match the current filters."
+          toolbarLeft={`${filtered.length} item${filtered.length === 1 ? '' : 's'}`}
+          columns={[
+            { id: 'name', header: 'Item Name', className: 'font-medium', cell: i => i.item_name },
+            { id: 'group', header: 'Group', className: 'text-gray-500 text-sm', cell: i => i.item_group?.name ?? '—' },
+            { id: 'uom', header: 'UOM', className: 'text-gray-500 text-sm', cell: i => i.uom ? `${i.uom.name} (${i.uom.abbreviation})` : '—' },
+            { id: 'weight', header: 'Weight (Kg)', className: 'text-right font-mono text-sm', cell: i => i.weight_kg != null ? formatNumber(i.weight_kg) : '—' },
+            { id: 'type', header: 'Type', cell: i => <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${ITEM_TYPE_COLOR[i.item_type]}`}>{itemTypeLabel(i.item_type)}</span> },
+            { id: 'description', header: 'Description', defaultHidden: true, className: 'text-gray-500 text-sm max-w-xs truncate', cell: i => i.description ?? '—' },
+            { id: 'status', header: 'Status', cell: i => <Badge variant={i.is_active ? 'default' : 'secondary'}>{i.is_active ? 'Active' : 'Inactive'}</Badge> },
+            ...(isAdmin ? [{ id: 'actions', header: 'Actions', alwaysVisible: true, className: 'w-24 text-right', cell: (i: Item) => (
+              <div className="flex justify-end gap-1">
+                <Button size="icon" variant="ghost" title="Duplicate" onClick={() => openDuplicate(i)}><Copy className="w-4 h-4" /></Button>
+                <Button size="icon" variant="ghost" title="Edit" onClick={() => openEdit(i)}><Pencil className="w-4 h-4" /></Button>
+                <Button size="icon" variant="ghost" className="text-red-500 hover:text-red-600" title="Delete" onClick={() => setDeleteTarget(i)}><Trash2 className="w-4 h-4" /></Button>
+              </div>
+            ) }] : []),
+          ] as TableColumn<Item>[]}
+        />
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

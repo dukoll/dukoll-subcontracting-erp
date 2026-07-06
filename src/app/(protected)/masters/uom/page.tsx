@@ -12,6 +12,7 @@ import type { UOM, UserRole } from '@/types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { CustomizableTable, type TableColumn } from '@/components/shared/CustomizableTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -134,38 +135,23 @@ export default function UOMPage() {
           <Input className="w-full sm:w-72" placeholder="Search name or abbreviation…" value={search} onChange={e => setSearch(e.target.value)} />
           {search && <Button variant="ghost" size="sm" onClick={() => setSearch('')}>Clear</Button>}
         </div>
-        <div className="rounded-lg border bg-white overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Abbreviation</TableHead>
-                <TableHead>Status</TableHead>
-                {isAdmin && <TableHead className="w-24 text-right">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUoms.length === 0 && (
-                <TableRow><TableCell colSpan={isAdmin ? 4 : 3} className="text-center text-gray-400 py-8">No units match your search.</TableCell></TableRow>
-              )}
-              {filteredUoms.map(u => (
-                <TableRow key={u.id}>
-                  <TableCell className="font-medium">{u.name}</TableCell>
-                  <TableCell><span className="font-mono text-sm bg-gray-100 px-2 py-0.5 rounded">{u.abbreviation}</span></TableCell>
-                  <TableCell><Badge variant={u.is_active ? 'default' : 'secondary'}>{u.is_active ? 'Active' : 'Inactive'}</Badge></TableCell>
-                  {isAdmin && (
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => openEdit(u)}><Pencil className="w-4 h-4" /></Button>
-                        <Button size="icon" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setDeleteTarget(u)}><Trash2 className="w-4 h-4" /></Button>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <CustomizableTable
+          storageKey="uom"
+          rows={filteredUoms}
+          rowKey={u => u.id}
+          empty="No units match your search."
+          columns={[
+            { id: 'name', header: 'Name', className: 'font-medium', cell: u => u.name },
+            { id: 'abbr', header: 'Abbreviation', cell: u => <span className="font-mono text-sm bg-gray-100 px-2 py-0.5 rounded">{u.abbreviation}</span> },
+            { id: 'status', header: 'Status', cell: u => <Badge variant={u.is_active ? 'default' : 'secondary'}>{u.is_active ? 'Active' : 'Inactive'}</Badge> },
+            ...(isAdmin ? [{ id: 'actions', header: 'Actions', alwaysVisible: true, className: 'w-24 text-right', cell: (u: UOM) => (
+              <div className="flex justify-end gap-1">
+                <Button size="icon" variant="ghost" onClick={() => openEdit(u)}><Pencil className="w-4 h-4" /></Button>
+                <Button size="icon" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setDeleteTarget(u)}><Trash2 className="w-4 h-4" /></Button>
+              </div>
+            ) }] : []),
+          ] as TableColumn<UOM>[]}
+        />
         </>
       )}
 

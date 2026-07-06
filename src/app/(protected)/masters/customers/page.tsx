@@ -12,6 +12,7 @@ import type { Customer, UserRole } from '@/types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { CustomizableTable, type TableColumn } from '@/components/shared/CustomizableTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -152,42 +153,26 @@ export default function CustomersPage() {
           <Input className="w-full sm:w-72" placeholder="Search name, city, phone or GST…" value={search} onChange={e => setSearch(e.target.value)} />
           {search && <Button variant="ghost" size="sm" onClick={() => setSearch('')}>Clear</Button>}
         </div>
-        <div className="rounded-lg border bg-white overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>City</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>GST No</TableHead>
-                <TableHead>Status</TableHead>
-                {isAdmin && <TableHead className="w-24 text-right">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredCustomers.length === 0 && (
-                <TableRow><TableCell colSpan={isAdmin ? 6 : 5} className="text-center text-gray-400 py-8">No customers match your search.</TableCell></TableRow>
-              )}
-              {filteredCustomers.map(c => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.name}</TableCell>
-                  <TableCell className="text-gray-500 text-sm">{c.city ?? '—'}</TableCell>
-                  <TableCell className="text-gray-500 text-sm">{c.phone ?? '—'}</TableCell>
-                  <TableCell className="text-gray-500 text-sm font-mono">{c.gst_no ?? '—'}</TableCell>
-                  <TableCell><Badge variant={c.is_active ? 'default' : 'secondary'}>{c.is_active ? 'Active' : 'Inactive'}</Badge></TableCell>
-                  {isAdmin && (
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => openEdit(c)}><Pencil className="w-4 h-4" /></Button>
-                        <Button size="icon" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setDeleteTarget(c)}><Trash2 className="w-4 h-4" /></Button>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <CustomizableTable
+          storageKey="customers"
+          rows={filteredCustomers}
+          rowKey={c => c.id}
+          empty="No customers match your search."
+          columns={[
+            { id: 'name', header: 'Name', className: 'font-medium', cell: c => c.name },
+            { id: 'city', header: 'City', className: 'text-gray-500 text-sm', cell: c => c.city ?? '—' },
+            { id: 'phone', header: 'Phone', className: 'text-gray-500 text-sm', cell: c => c.phone ?? '—' },
+            { id: 'email', header: 'Email', defaultHidden: true, className: 'text-gray-500 text-sm', cell: c => c.email ?? '—' },
+            { id: 'gst', header: 'GST No', className: 'text-gray-500 text-sm font-mono', cell: c => c.gst_no ?? '—' },
+            { id: 'status', header: 'Status', cell: c => <Badge variant={c.is_active ? 'default' : 'secondary'}>{c.is_active ? 'Active' : 'Inactive'}</Badge> },
+            ...(isAdmin ? [{ id: 'actions', header: 'Actions', alwaysVisible: true, className: 'w-24 text-right', cell: (c: Customer) => (
+              <div className="flex justify-end gap-1">
+                <Button size="icon" variant="ghost" onClick={() => openEdit(c)}><Pencil className="w-4 h-4" /></Button>
+                <Button size="icon" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setDeleteTarget(c)}><Trash2 className="w-4 h-4" /></Button>
+              </div>
+            ) }] : []),
+          ] as TableColumn<Customer>[]}
+        />
         </>
       )}
 
