@@ -9,6 +9,7 @@ import type { UserRole, Profile } from '@/types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { AccessDenied } from '@/components/shared/AccessDenied';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { CustomizableTable, type TableColumn } from '@/components/shared/CustomizableTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -154,46 +155,27 @@ export default function UsersPage() {
       ) : filtered.length === 0 ? (
         <EmptyState title="No users found" description="No users match your search." />
       ) : (
-        <div className="rounded-lg border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Full Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map(user => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.full_name}</TableCell>
-                  <TableCell className="text-sm text-gray-600">{user.email}</TableCell>
-                  <TableCell>
-                    <Badge className={ROLE_BADGE[user.role]}>{roleLabel(user.role)}</Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-600">{user.phone ?? '—'}</TableCell>
-                  <TableCell>
-                    <button onClick={() => toggleActive(user)} className="focus:outline-none">
-                      {user.is_active
-                        ? <Badge className="bg-green-100 text-green-800 cursor-pointer">Active</Badge>
-                        : <Badge variant="secondary" className="cursor-pointer">Inactive</Badge>}
-                    </button>
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-500">{formatDate(user.created_at)}</TableCell>
-                  <TableCell className="text-right">
-                    <Button size="sm" variant="ghost" onClick={() => openEdit(user)}>
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <CustomizableTable
+          storageKey="admin-users"
+          rows={filtered}
+          rowKey={u => u.id}
+          columns={[
+            { id: 'name', header: 'Full Name', className: 'font-medium', cell: u => u.full_name },
+            { id: 'username', header: 'Username', defaultHidden: true, className: 'text-sm text-gray-600', cell: u => (u as Profile & { username?: string }).username ?? '—' },
+            { id: 'email', header: 'Email', className: 'text-sm text-gray-600', cell: u => u.email },
+            { id: 'role', header: 'Role', cell: u => <Badge className={ROLE_BADGE[u.role]}>{roleLabel(u.role)}</Badge> },
+            { id: 'phone', header: 'Phone', className: 'text-sm text-gray-600', cell: u => u.phone ?? '—' },
+            { id: 'status', header: 'Status', cell: u => (
+              <button onClick={() => toggleActive(u)} className="focus:outline-none">
+                {u.is_active ? <Badge className="bg-green-100 text-green-800 cursor-pointer">Active</Badge> : <Badge variant="secondary" className="cursor-pointer">Inactive</Badge>}
+              </button>
+            ) },
+            { id: 'created', header: 'Created', className: 'text-sm text-gray-500', cell: u => formatDate(u.created_at) },
+            { id: 'actions', header: 'Actions', alwaysVisible: true, className: 'text-right', cell: (u: Profile) => (
+              <Button size="sm" variant="ghost" onClick={() => openEdit(u)}><Pencil className="w-4 h-4" /></Button>
+            ) },
+          ] as TableColumn<Profile>[]}
+        />
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

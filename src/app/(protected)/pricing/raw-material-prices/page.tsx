@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { AccessDenied } from '@/components/shared/AccessDenied';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { CustomizableTable, type TableColumn } from '@/components/shared/CustomizableTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -198,56 +199,31 @@ export default function RawMaterialPricesPage() {
       ) : filtered.length === 0 ? (
         <EmptyState title="No prices found" description="Add the first raw material price." action={<Button onClick={openAdd}><Plus className="w-4 h-4 mr-1" />Add Price</Button>} />
       ) : (
-        <div className="rounded-lg border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item Name</TableHead>
-                <TableHead>Supplier</TableHead>
-                <TableHead>Price/UOM</TableHead>
-                <TableHead>UOM</TableHead>
-                <TableHead>Effective From</TableHead>
-                <TableHead>Effective To</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Approved By</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map(price => (
-                <TableRow key={price.id}>
-                  <TableCell className="font-medium">{price.item?.item_name ?? '—'}</TableCell>
-                  <TableCell>{price.supplier?.name ?? '—'}</TableCell>
-                  <TableCell>{formatCurrency(price.price_per_uom)}</TableCell>
-                  <TableCell>{price.uom?.abbreviation ?? '—'}</TableCell>
-                  <TableCell>{formatDate(price.effective_from)}</TableCell>
-                  <TableCell>{price.effective_to ? formatDate(price.effective_to) : '—'}</TableCell>
-                  <TableCell>
-                    {price.is_active
-                      ? <Badge className="bg-green-100 text-green-800">Active</Badge>
-                      : <Badge variant="secondary">Inactive</Badge>}
-                  </TableCell>
-                  <TableCell>{(price as any).approved_by ? 'Approved' : '—'}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      {!(price as any).approved_by && (
-                        <Button size="sm" variant="outline" onClick={() => handleApprove(price)}>
-                          <CheckCircle className="w-4 h-4 mr-1" />Approve
-                        </Button>
-                      )}
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(price)}>
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" className="text-gray-400 hover:text-red-500" onClick={() => setDeleteTarget(price)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <CustomizableTable
+          storageKey="raw-material-prices"
+          rows={filtered}
+          rowKey={p => p.id}
+          columns={[
+            { id: 'item', header: 'Item Name', className: 'font-medium', cell: p => p.item?.item_name ?? '—' },
+            { id: 'supplier', header: 'Supplier', cell: p => p.supplier?.name ?? '—' },
+            { id: 'price', header: 'Price/UOM', cell: p => formatCurrency(p.price_per_uom) },
+            { id: 'uom', header: 'UOM', cell: p => p.uom?.abbreviation ?? '—' },
+            { id: 'from', header: 'Effective From', cell: p => formatDate(p.effective_from) },
+            { id: 'to', header: 'Effective To', cell: p => p.effective_to ? formatDate(p.effective_to) : '—' },
+            { id: 'status', header: 'Status', cell: p => p.is_active ? <Badge className="bg-green-100 text-green-800">Active</Badge> : <Badge variant="secondary">Inactive</Badge> },
+            { id: 'approved', header: 'Approved By', cell: p => (p as PriceRow & { approved_by?: string }).approved_by ? 'Approved' : '—' },
+            { id: 'remarks', header: 'Remarks', defaultHidden: true, className: 'max-w-xs truncate text-sm text-gray-500', cell: p => p.remarks ?? '—' },
+            { id: 'actions', header: 'Actions', alwaysVisible: true, className: 'text-right', cell: (p: PriceRow) => (
+              <div className="flex justify-end gap-2">
+                {!(p as PriceRow & { approved_by?: string }).approved_by && (
+                  <Button size="sm" variant="outline" onClick={() => handleApprove(p)}><CheckCircle className="w-4 h-4 mr-1" />Approve</Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => openEdit(p)}><Pencil className="w-4 h-4" /></Button>
+                <Button size="sm" variant="ghost" className="text-gray-400 hover:text-red-500" onClick={() => setDeleteTarget(p)}><Trash2 className="w-4 h-4" /></Button>
+              </div>
+            ) },
+          ] as TableColumn<PriceRow>[]}
+        />
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
